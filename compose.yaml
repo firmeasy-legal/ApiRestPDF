@@ -1,0 +1,53 @@
+services:
+  app:
+    container_name: pdf-editor-app
+    build:
+      context: .
+      dockerfile: ./dev.dockerfile
+    env_file:
+      - .env
+    hostname: pdf-editor
+    restart: always
+    networks:
+      - pdf-editor-network
+    volumes:
+      - ./src:/app/src
+      - ./logs/app:/app/logs/app
+      - ./prisma:/app/prisma
+    depends_on:
+      - db
+  www:
+    container_name: pdf-editor-www
+    image: nginx:alpine
+    volumes:
+      - ./docker/www/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./logs/www:/var/log/nginx
+    ports:
+      - 80:80
+    depends_on:
+      - app
+    networks:
+      - pdf-editor-network
+  db:
+    container_name: pdf-editor-db
+    image: postgres:15-alpine
+    restart: always
+    hostname: ${DATABASE_HOST}
+    ports:
+      - ${DATABASE_PORT}:${DATABASE_PORT}
+    volumes:
+      - ./docker/database/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./docker/database/data:/var/lib/postgresql/data
+      - ./logs/database:/var/log/postgresql
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf -p ${DATABASE_PORT}
+    environment:
+      DATABASE_HOST: ${DATABASE_HOST}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASS}
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_PORT: ${DATABASE_PORT}
+    networks:
+      - pdf-editor-network
+networks:
+  pdf-editor-network:
+    driver: bridge

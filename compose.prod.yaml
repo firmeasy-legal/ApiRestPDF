@@ -1,0 +1,30 @@
+services:
+  app:
+    container_name: psp-app
+    build:
+      context: .
+      dockerfile: ./prod.dockerfile
+    env_file:
+      - .env
+    hostname: print-sender
+    restart: always
+    networks:
+      - print-sender-network
+    volumes:
+      - ./logs/app:/app/logs/app
+      - ./prisma:/app/prisma
+  www:
+    container_name: psp-www
+    image: nginx:alpine
+    volumes:
+      - ./docker/www/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./logs/www:/var/log/nginx
+    ports:
+      - 80:80
+    depends_on:
+      - app
+    networks:
+      - print-sender-network
+networks:
+  print-sender-network:
+    driver: bridge

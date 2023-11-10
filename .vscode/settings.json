@@ -1,0 +1,42 @@
+{
+	"explorer.fileNesting.enabled": true,
+	"explorer.fileNesting.patterns": {
+		"package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, tsconfig.json, .eslintrc.json, .hintrc, esbuild.config.mjs",
+		"composer.json": "composer.lock, captainhook.json, psalm.xml, constant-tables.list",
+		"compose.yaml": "Dockerfile, compose.prod.yaml, .dockerignore, *.dockerfile",
+		"*.css": "*.css.map",
+		".env": ".env.local, .env.development, .env.test, .env.production",
+	},
+	"explorer.autoRevealExclude": {
+		"**/node_modules": true,
+		"**/build": true,
+		"**/vendor": true,
+		"**/migrations": true,
+	},
+	"files.eol": "\n",
+	"files.exclude": {
+		"**/.git": true,
+	},
+	"editor.formatOnSave": true,
+	"editor.tabSize": 2,
+	"editor.detectIndentation": false,
+	"editor.insertSpaces": false,
+	"editor.inlayHints.enabled": "on",
+	"editor.codeActionsOnSave": {
+		"source.organizeImports": true
+	},
+	"typescript.inlayHints.enumMemberValues.enabled": true,
+	"typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+	"typescript.inlayHints.parameterNames.enabled": "none",
+	"typescript.inlayHints.parameterTypes.enabled": true,
+	"typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+	"typescript.inlayHints.variableTypes.enabled": true,
+	"typescript.inlayHints.variableTypes.suppressWhenTypeMatchesName": true,
+	"css.lint.validProperties": [
+		"composes"
+	],
+	"svg.preview.background": "white",
+	"cSpell.words": [
+		"Empresa"
+	]
+}

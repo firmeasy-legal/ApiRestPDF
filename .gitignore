@@ -1,0 +1,13 @@
+.env
+node_modules
+build
+logs/**/*.log
+logs/database/*
+bin/*.txt
+
+.pnpm-store
+
+dist/*
+tmp/*
+
+docker/database/data/*
