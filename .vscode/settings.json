@@ -19,7 +19,7 @@
 	},
 	"editor.formatOnSave": true,
 	"editor.tabSize": 2,
-	"editor.detectIndentation": false,
+	"editor.detectIndentation": true,
 	"editor.insertSpaces": false,
 	"editor.inlayHints.enabled": "on",
 	"editor.codeActionsOnSave": {
@@ -38,5 +38,5 @@
 	"svg.preview.background": "white",
 	"cSpell.words": [
 		"Empresa"
-	]
+	],
 }

@@ -18,7 +18,7 @@ export class ExpressServer {
 		const server = express()
 
 		server.use(express.json({
-			limit: "500mb"
+			limit: "1gb"
 		}))
 
 		server.use(morganLoggerMiddleware({ loggerRepository }))
