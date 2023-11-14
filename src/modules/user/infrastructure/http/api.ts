@@ -52,14 +52,6 @@ apiRouter.post("/token", async (req: Request, res: Response) => {
 	})
 })
 
-apiRouter.post("/test", async (req: Request, res: Response) => {
-
-	return res.json({
-		ok: true,
-		message: "Test"
-	})
-})
-
 
 export { apiRouter }
 

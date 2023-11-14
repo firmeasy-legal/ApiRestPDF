@@ -1,11 +1,11 @@
-import { PDFEditor } from "@/editor/aplication/services/pdfEditor"
-import { S3Repository } from "@/editor/infrastructure/repositories/s3Repository"
+import { PDFEditor } from "@/editor/aplication/pdfEditor"
+import { S3Repository } from "@/editor/infrastructure/persistence/s3Repository"
 
 class GeneratePDFService {
 	constructor(
-    private s3Repository: S3Repository,
-    private pdfEditor: PDFEditor
-	) {}
+		private s3Repository: S3Repository,
+		private pdfEditor: PDFEditor
+	) { }
 
 	async generateAndEditPDFFromURI(uri: string): Promise<Buffer> {
 		// Obtener el PDF desde S3
@@ -19,3 +19,4 @@ class GeneratePDFService {
 }
 
 export { GeneratePDFService }
+
