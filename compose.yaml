@@ -14,6 +14,7 @@ services:
       - ./src:/app/src
       - ./logs/app:/app/logs/app
       - ./prisma:/app/prisma
+      - ./tmp:/app/tmp
     depends_on:
       - db
   www:
