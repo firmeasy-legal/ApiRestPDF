@@ -2,7 +2,6 @@ import express, { Router } from "express"
 
 import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
 import { morganLoggerMiddleware } from "./httpLoggerFunction"
-import path from "node:path"
 
 type Params = {
 	apiRouter: Router
@@ -17,9 +16,6 @@ export class ExpressServer {
 		loggerRepository,
 	}: Params) {
 		const server = express()
-
-		const staticFilesPath = path.join(__dirname, "public")
-		server.use("/tmp", express.static(staticFilesPath))
 
 		server.use(express.json({
 			limit: "1gb"

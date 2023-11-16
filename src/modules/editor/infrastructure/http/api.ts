@@ -1,7 +1,5 @@
 import { Request, Response, Router } from "express"
-
-import fs from "node:fs"
-import { s3Repository } from "@/shared/infrastructure/container"
+import { pdfEditor, s3Repository } from "@/shared/infrastructure/container"
 
 const apiRouter = Router()
 
@@ -14,41 +12,23 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 
 	try {
 
-		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${origin_filename}`)
+		const buffer_file = await s3Repository.getTempPathFromURI_PDF(`public/${origin_filename}`)
 
-		if (!path_file) {
+
+		if (!buffer_file) {
 			return res.status(401).json({
 				message: "Hubo un error al obtener el PDF"
 			})
-
 		}
 
-		try {
-			fs.accessSync(path_file, fs.constants.R_OK)
-			console.log("Puede leer el archivo! 🎉")
+		const new_pdf = await pdfEditor.addInitialSignature(buffer_file, signature_params)
 
-			const data = fs.readFileSync(path_file, "base64")
-
-			// Envia el contenido del archivo como respuesta
-			res.status(200).json({
-				message: "Contenido del archivo leído exitosamente",
-				content: data,
-			})
-		} catch (err) {
-			console.error("No tiene acceso al archivo:", err)
-			return res.status(500).json({
-				message: "Error al acceder al archivo",
-				error: err
-			})
-		}
-
-		// const newpdf = await pdfEditor.addInitialSignature(path_file, signature_params)
-
-		// return res.json({
-		// 	message: "PDF obtenido correctamente",
-		// 	path_file,
-		// 	newpdf
-		// })
+		return res.json({
+			message: "PDF obtenido correctamente",
+			signature_params,
+			buffer_file,
+			new_pdf
+		})
 
 	} catch (error) {
 		console.error(error)

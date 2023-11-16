@@ -18,16 +18,17 @@ type Params = {
 export class S3Repository {
 	private s3Client: S3Client
 	private loggerRepository: LoggerRepository
-	
-	constructor({ s3Client, loggerRepository}: Params) {
+
+	constructor({ s3Client, loggerRepository }: Params) {
 		this.s3Client = s3Client
 		this.loggerRepository = loggerRepository
 	}
-	
+
+	// async getTempPathFromURI_PDF(uri: string): Promise<Buffer | undefined> {
 	async getTempPathFromURI_PDF(uri: string): Promise<string | undefined> {
-		
+
 		const uuid = crypto.randomUUID()
-		
+
 		const command = new GetObjectCommand({
 			Bucket: process.env.AWS_BUCKET,
 			Key: uri,
@@ -42,12 +43,31 @@ export class S3Repository {
 
 			const readstream = response.Body as Readable
 
-			// const tempDir = fs.mkdtempSync(path.join(process.cwd(), "temp"))
-			const tempFilePath = path.join(process.cwd(), "tmp/input_PDF", `input_${uuid}.pdf`)
+			const filePath = `tmp/input_PDF/${uuid}.pdf`
+			const fileWriteStream = fs.createWriteStream(filePath)
 
-			readstream.pipe(fs.createWriteStream(tempFilePath))
+			readstream.on("data", (chunk) => {
+				fileWriteStream.write(chunk)
+			})
 
-			return tempFilePath
+			readstream.on("end", () => {
+				fileWriteStream.end()
+				console.log(`PDF guardado en ${filePath}`)
+			})
+
+			return filePath
+
+			// return await new Promise((resolve, reject) => {
+			// 	const chunks: Buffer[] = []
+			// 	readstream.on("data", (chunk) => {
+			// 		chunks.push(chunk)
+			// 	})
+			// 	readstream.on("end", () => {
+			// 		const buffer = Buffer.concat(chunks)
+			// 		resolve(buffer)
+			// 	})
+			// 	readstream.on("error", reject)
+			// })
 
 		} catch (error) {
 			this.loggerRepository.error(error)
