@@ -1,6 +1,9 @@
 import { Request, Response, Router } from "express"
 import { pdfEditor, s3Repository } from "@/shared/infrastructure/container"
 
+import { filerepository } from "@/shared/infrastructure/container"
+import { loggerRepository } from "@/shared/infrastructure/container"
+
 const apiRouter = Router()
 
 apiRouter.post("/getPdf", async (req: Request, res: Response) => {
@@ -12,28 +15,41 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 
 	try {
 
-		const buffer_file = await s3Repository.getTempPathFromURI_PDF(`public/${origin_filename}`)
+		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${origin_filename}`)
 
-
-		if (!buffer_file) {
+		if (!path_file) {
 			return res.status(401).json({
 				message: "Hubo un error al obtener el PDF"
 			})
 		}
 
-		const new_pdf = await pdfEditor.addInitialSignature(buffer_file, signature_params)
+		const path_signature_image = await s3Repository.getTempPathFromURI_PNG(`public/${signature_params.signature_filename}`)
 
-		return res.json({
+		if (!path_signature_image) {
+			return res.status(401).json({
+				message: "Hubo un error al obtener la firma"
+			})
+		}
+
+		const new_pdf = await pdfEditor.addInitialSignature(path_file, path_signature_image, signature_params)
+
+		res.json({
 			message: "PDF obtenido correctamente",
 			signature_params,
-			buffer_file,
+			path_file,
+			path_signature_image,
 			new_pdf
 		})
 
+		filerepository.deleteFile(path_file)
+		// filerepository.deleteFile(path_signature_image)
+
 	} catch (error) {
-		console.error(error)
+		loggerRepository.error(error)
+		console.error("Error:", error)
 		return res.status(500).json({
-			message: "Error"
+			message: "Error al procesar el PDF",
+			error: error
 		})
 	}
 })

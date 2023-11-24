@@ -1,6 +1,7 @@
 import { rootDir, serverPort } from "./constants"
 
 import { ExpressServer } from "./http/ExpressServer"
+import { FileRepository } from "@/editor/infrastructure/persistence/fileRepository"
 import { PDFEditor } from "@/editor/infrastructure/persistence/editPdf"
 import { PrismaClient } from "./persistence"
 import { PrismaUserRepository } from "@/user/infrastructure/persistence/PrismaUserRepository"
@@ -21,10 +22,6 @@ export const prismaClient = new PrismaClient({
 
 const config = {
 	region: `${process.env.AWS_REGION}`,
-	// credentials: {
-	// 	accessKeyId: `${process.env.AWS_ACCESS_KEY_ID}`,
-	// 	secretAccessKey: `${process.env.AWS_SECRET_ACCESS_KEY}`,
-	// },
 }
 
 const s3client = new S3Client(config)
@@ -36,6 +33,10 @@ export const s3Repository = new S3Repository({
 
 export const pdfEditor = new PDFEditor({
 	loggerRepository,
+})
+
+export const filerepository = new FileRepository({
+	loggerRepository
 })
 
 export const userRepository = new PrismaUserRepository({

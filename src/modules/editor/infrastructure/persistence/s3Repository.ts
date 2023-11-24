@@ -7,7 +7,6 @@ import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
 import { Readable } from "node:stream"
 import crypto from "node:crypto"
 import fs from "node:fs"
-import path from "node:path"
 
 type Params = {
 	s3Client: S3Client;
@@ -24,7 +23,6 @@ export class S3Repository {
 		this.loggerRepository = loggerRepository
 	}
 
-	// async getTempPathFromURI_PDF(uri: string): Promise<Buffer | undefined> {
 	async getTempPathFromURI_PDF(uri: string): Promise<string | undefined> {
 
 		const uuid = crypto.randomUUID()
@@ -46,28 +44,20 @@ export class S3Repository {
 			const filePath = `tmp/input_PDF/${uuid}.pdf`
 			const fileWriteStream = fs.createWriteStream(filePath)
 
-			readstream.on("data", (chunk) => {
-				fileWriteStream.write(chunk)
+			readstream.pipe(fileWriteStream)
+
+			return await new Promise<string>((resolve, reject) => {
+				fileWriteStream.on("finish", () => {
+					console.log(`PDF guardado en ${filePath}`)
+					fileWriteStream.close()
+					resolve(filePath)
+				})
+
+				fileWriteStream.on("error", (err) => {
+					console.error("Error al escribir el archivo:", err)
+					reject(err)
+				})
 			})
-
-			readstream.on("end", () => {
-				fileWriteStream.end()
-				console.log(`PDF guardado en ${filePath}`)
-			})
-
-			return filePath
-
-			// return await new Promise((resolve, reject) => {
-			// 	const chunks: Buffer[] = []
-			// 	readstream.on("data", (chunk) => {
-			// 		chunks.push(chunk)
-			// 	})
-			// 	readstream.on("end", () => {
-			// 		const buffer = Buffer.concat(chunks)
-			// 		resolve(buffer)
-			// 	})
-			// 	readstream.on("error", reject)
-			// })
 
 		} catch (error) {
 			this.loggerRepository.error(error)
@@ -94,12 +84,23 @@ export class S3Repository {
 
 			const readstream = response.Body as Readable
 
-			const tempDir = fs.mkdtempSync(path.join(process.cwd(), "temp"))
-			const tempFilePath = path.join(tempDir, `${uuid}.png`)
+			const filePath = `tmp/input_PNG/${uuid}.png`
+			const fileWriteStream = fs.createWriteStream(filePath)
 
-			readstream.pipe(fs.createWriteStream(tempFilePath))
+			readstream.pipe(fileWriteStream)
 
-			return tempFilePath
+			return await new Promise<string>((resolve, reject) => {
+				fileWriteStream.on("finish", () => {
+					console.log(`PNG guardado en ${filePath}`)
+					fileWriteStream.close()
+					resolve(filePath)
+				})
+
+				fileWriteStream.on("error", (err) => {
+					console.error("Error al escribir la imagen:", err)
+					reject(err)
+				})
+			})
 
 		} catch (error) {
 			this.loggerRepository.error(error)

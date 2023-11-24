@@ -1,5 +1,6 @@
-import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository";
-import { Recipe } from "muhammara";
+import { PDFPageModifier, PDFRStreamForFile, PDFWStreamForFile, createReader, createWriterToModify } from "muhammara"
+
+import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
 
 type Params = {
 	loggerRepository: LoggerRepository;
@@ -22,36 +23,93 @@ export class PDFEditor {
 		this.loggerRepository = loggerRepository
 	}
 
-	// async addInitialSignature(buffer_file: Buffer, signature_params: SignatureParams) {
-	async addInitialSignature(buffer_file: string, signature_params: SignatureParams) {
+	async addInitialSignature(path_file: string, path_signature: string, signature_params: SignatureParams) {
 
 		try {
-			const pdfDoc = new Recipe(buffer_file, "tmp/output_PDF/signed.pdf")
+			const inStream = new PDFRStreamForFile(
+				process.cwd() +"/"+ path_file
+			)
+			const outStream = new PDFWStreamForFile(
+				process.cwd() + "/tmp/output_PDF/" + "signed.pdf"
+			)
 
-			pdfDoc
-				.editPage(signature_params.page)
-				.text("Hello World!", 200, 200)
-				.endPage()
-				.endPDF
+			const pdfWriter = createWriterToModify(inStream, outStream)
 
-			// Guarda el nuevo Buffer en un archivo PDF
-			// fs.writeFileSync("tmp/output_PDF/signed.pdf", newBuffer)
+			const pdfReader = createReader(process.cwd() + "/" + path_file)
 
-			return "tmp/output_PDF/signed.pdf"
-			// const newBuffer = await new Promise<Buffer>((res) => {
-			// 	const pdfDoc = new Recipe(buffer_file as unknown as string, undefined)
+			const pageCount = pdfReader.getPagesCount()
 
-			// 	pdfDoc
-			// 		.editPage(signature_params.page)
-			// 		.text("Hello World!", 200, 200)
-			// 		.endPage()	
+			const token = signature_params.file_token
 
-			// 	pdfDoc.endPDF(buffer => res(buffer))
-			// })
+			for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+				const page = pdfReader.parsePage(pageIndex)
+				const pageWidth = page.getMediaBox()[2]
+				const pageHeight = page.getMediaBox()[3]
+				console.log(pageWidth, pageHeight)
 
-			// fs.writeFileSync("tmp/output_PDF/signed.pdf", newBuffer)
-			
-			// return newBuffer
+				//quiero que agregar la firma en la primera pagina
+				if (signature_params.page === pageIndex + 1) {
+					const pageModifier = new PDFPageModifier(pdfWriter, pageIndex)
+
+					pageModifier
+						.startContext()
+						.getContext()
+						.drawImage(signature_params.eje_x,
+							pageHeight - signature_params.eje_y,
+							path_signature,
+							{
+								transformation: {
+									width: 42,
+									height: 15,
+									fit: "always",
+								},
+							})
+
+					pageModifier
+						.endContext()
+						.writePage()
+				}
+				
+
+				const pageModifier = new PDFPageModifier(pdfWriter, pageIndex)
+
+				pageModifier
+					.startContext()
+					.getContext()
+					.writeText(signature_params.company_name,
+						25,
+						15,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
+							),
+							size: 8,
+							colorspace: "gray",
+							color: 0x747474,
+						})
+					.writeText(token,
+						25 + 42,
+						15,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
+							),
+							size: 7,
+							colorspace: "gray",
+							color: 0x7c7c7c,
+						})
+
+				pageModifier
+					.endContext()
+					.writePage()
+			}
+
+			pdfWriter.end()
+
+			outStream.close()
+			inStream.close()
+				
+			return "tmp/output_PDF/" + "signed.pdf"
 
 		} catch (error) {
 			this.loggerRepository.error(error)
