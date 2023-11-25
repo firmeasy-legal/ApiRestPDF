@@ -23,7 +23,7 @@ export class FileRepository {
 				setTimeout(() => {
 					resolve(true)
 				}, 3000)
-			})
+			})	
 
 			return this.deleteFile(path_file)
 		}

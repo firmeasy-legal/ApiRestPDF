@@ -1,6 +1,6 @@
 
 export const rootDir = process.cwd()
-export const serverPort = 80
+export const serverPort = 3000
 export const amountPasswordSaltRounds = 10
 export const jwtAuthSecret = `${process.env.JWT_AUTH_SECRET}`
 

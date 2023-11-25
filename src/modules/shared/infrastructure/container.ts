@@ -1,5 +1,6 @@
 import { rootDir, serverPort } from "./constants"
 
+import { EventEmitter } from "node:events"
 import { ExpressServer } from "./http/ExpressServer"
 import { FileRepository } from "@/editor/infrastructure/persistence/fileRepository"
 import { PDFEditor } from "@/editor/infrastructure/persistence/editPdf"
@@ -11,6 +12,8 @@ import { S3Repository } from "@/editor/infrastructure/persistence/s3Repository"
 import { WinstonLoggerRepository } from "./logs/WinstonLoggerRepository"
 import { pdfEditorRouter } from "@/editor/infrastructure/http"
 import { userRouter } from "@/user/infrastructure/http"
+
+export const eventEmitir = new EventEmitter()
 
 export const loggerRepository = new WinstonLoggerRepository({
 	logsDir: `${rootDir}/logs/app`,
@@ -33,6 +36,7 @@ export const s3Repository = new S3Repository({
 
 export const pdfEditor = new PDFEditor({
 	loggerRepository,
+	eventEmitir
 })
 
 export const filerepository = new FileRepository({

@@ -8,6 +8,7 @@ bin/*.txt
 .pnpm-store
 
 dist/*
-tmp/*
+tmp/**/*.pdf
+tmp/**/*.png
 
 docker/database/data/*

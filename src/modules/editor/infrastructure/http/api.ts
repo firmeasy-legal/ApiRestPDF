@@ -31,18 +31,39 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 			})
 		}
 
-		const new_pdf = await pdfEditor.addInitialSignature(path_file, path_signature_image, signature_params)
+		if(signature_params.qr_filename && signature_params.qr_filename !== null) {
+			const path_qr_image = await s3Repository.getTempPathFromURI_PNG(`public${signature_params.qr_filename}`)
+			if (!path_qr_image) {
+				return res.status(401).json({
+					message: "Hubo un error al obtener el QR"
+				})
+			}
+			signature_params.qr_filename = path_qr_image
+		}
+
+		const pdf_signed = await pdfEditor.addInitialSignature(path_file, signature_params, path_signature_image)
+		
+		if (!pdf_signed) {
+			return res.status(401).json({
+				message: "Hubo un error al procesar el PDF no firmado"
+			})
+		}
+		
+		const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params, path_signature_image)
 
 		res.json({
 			message: "PDF obtenido correctamente",
 			signature_params,
 			path_file,
 			path_signature_image,
-			new_pdf
+			pdf_signed,
+			pdf_summary_added
 		})
 
-		filerepository.deleteFile(path_file)
-		// filerepository.deleteFile(path_signature_image)
+		// filerepository.deleteFile(path_file)
+		filerepository.deleteFile(path_signature_image)
+		filerepository.deleteFile(signature_params.qr_filename)
+		// filerepository.deleteFile(pdf_signed)
 
 	} catch (error) {
 		loggerRepository.error(error)
