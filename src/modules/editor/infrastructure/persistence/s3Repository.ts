@@ -45,7 +45,11 @@ export class S3Repository {
 			const fileWriteStream = fs.createWriteStream(filePath)
 
 			readstream.pipe(fileWriteStream)
-
+			
+			console.log("====================================================================================================")
+			console.log("==================================== Starding to write PDF file ====================================")
+			console.log("====================================================================================================")
+			
 			return await new Promise<string>((resolve, reject) => {
 				fileWriteStream.on("finish", () => {
 					console.log(`PDF guardado en ${filePath}`)

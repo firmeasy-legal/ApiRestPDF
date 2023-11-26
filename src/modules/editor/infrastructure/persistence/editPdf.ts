@@ -1,9 +1,9 @@
-import { PDFPageModifier, PDFRStreamForFile, PDFWStreamForFile, createReader, createWriterToModify } from "muhammara"
+import { PDFPageModifier, createReader, createWriterToModify } from "muhammara"
 
 import { EventEmitter } from "node:events"
 import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
 import crypto from "node:crypto"
-import fs from "node:fs/promises"
+import fs from "node:fs"
 
 type Params = {
 	loggerRepository: LoggerRepository;
@@ -12,6 +12,7 @@ type Params = {
 
 type SignatureParams = {
 	signature_filename: string;
+	path_signature: string;
 	qr_filename?: string;
 	mm: number;
 	eje_x: number;
@@ -28,65 +29,217 @@ export class PDFEditor {
 
 	constructor({ loggerRepository, eventEmitir }: Params) {
 		this.loggerRepository = loggerRepository
-		this.eventEmitir =	eventEmitir
+		this.eventEmitir = eventEmitir
 	}
 
 	async addInitialSignature(
-		path_file: string, 
-		signature_params: SignatureParams, 
-		path_signature: string
+		path_file: string,
+		signature_params: SignatureParams
 	) {
 
 		try {
-			
-			const inStream = new PDFRStreamForFile(
-				process.cwd() +"/"+ path_file
-			)
 
-			const outStream = new PDFWStreamForFile(
-				// process.cwd() + "/tmp/output_PDF/" + signature_params.file_token + "_signed.pdf"
-				// process.cwd() + "/tmp/output_PDF/" + this.uuid + "_signed.pdf"
-				process.cwd() + "/" + path_file
-			)
+			console.log("====================================================================================================")
+			console.log("=================================== Starding add initial signature in PDF ==========================")
+			console.log("====================================================================================================")
 
-			const pdfWriter = createWriterToModify(inStream, outStream)
+			const input = process.cwd() + "/" + path_file
+			const output = "tmp/output_PDF/" + signature_params.file_token + "_signed.pdf"
 
-			const pdfReader = createReader(process.cwd() + "/" + path_file)
+			const inStream = fs.createReadStream(input)
+			const outStream = fs.createWriteStream(process.cwd() + "/" + output)
 
-			const pageCount = pdfReader.getPagesCount()
+			outStream.on("close", () => {
 
-			const token = signature_params.file_token
+				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
 
+				const pdfReader = createReader(input)
 
-			for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-				const page = pdfReader.parsePage(pageIndex)
-				const pageWidth = page.getMediaBox()[2]
-				const pageHeight = page.getMediaBox()[3]
-				console.log(pageWidth, pageHeight)
+				const pageCount = pdfReader.getPagesCount()
 
-				const pageModifier = new PDFPageModifier(pdfWriter, pageIndex)
-				if (signature_params.page === pageIndex + 1) {
-					console.log("agregando firma")
+				const token = signature_params.file_token
+
+				for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+
+					const pageModifier = new PDFPageModifier(pdfWriter, pageIndex)
+
+					if (signature_params.page === pageIndex + 1) {
+
+						pageModifier
+							.startContext()
+							.getContext()
+							.drawImage(signature_params.eje_x,
+								signature_params.eje_y * signature_params.mm,
+								signature_params.path_signature,
+								{
+									transformation:
+									{
+										width: 140,
+										height: 140 / 2,
+										proportional: true,
+										fit: "always",
+									}
+								})
+					}
 
 					pageModifier
 						.startContext()
 						.getContext()
-						.drawImage(signature_params.eje_x,
-							signature_params.eje_y * signature_params.mm,
-							path_signature,
-							{ transformation:
-								{
-									width: 140,
-									height: 140 / 2,
-									proportional: true,
-									fit: "always",
-								}
+						.writeText(signature_params.company_name,
+							25,
+							15,
+							{
+								font: pdfWriter.getFontForFile(
+									process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
+								),
+								size: 8,
+								colorspace: "gray",
+								color: 0x747474,
 							})
+						.writeText(token,
+							25 + 42,
+							15,
+							{
+								font: pdfWriter.getFontForFile(
+									process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
+								),
+								size: 7,
+								colorspace: "gray",
+								color: 0x7c7c7c,
+							})
+
+					pageModifier
+						.endContext()
+						.writePage()
 				}
-				
-				pageModifier
-					.startContext()
-					.getContext()
+
+				pdfWriter.end()
+
+				// outStream.close()
+				// inStream.close()
+			})
+
+			inStream.pipe(outStream)
+
+			return await new Promise<string>((resolve, reject) => {
+				outStream.on("finish", () => {
+					console.log(`PDF guardado en ${output}`)
+					outStream.close()
+					inStream.close()
+					resolve(output)
+				})
+
+				outStream.on("error", (err) => {
+					console.error("Error al escribir el archivo:", err)
+					reject(err)
+				})
+			})
+
+		} catch (error) {
+			this.loggerRepository.error(error)
+			console.error("Error:", error)
+			return undefined
+		}
+
+	}
+
+	async addSummarySignature(
+		path_file: string,
+		signature_params: SignatureParams,
+	) {
+
+		try {
+
+			console.log("====================================================================================================")
+			console.log("=================================== Starding add summary signature in PDF ==========================")
+			console.log("====================================================================================================")
+
+			const input = process.cwd() + "/" + path_file
+			const output = "tmp/output_PDF/" + signature_params.file_token + "_summary.pdf"
+
+			const inStream = fs.createReadStream(input)
+			const outStream = fs.createWriteStream(process.cwd() + "/" + output)
+
+			const token = signature_params.file_token
+
+			outStream.on("close", () => {
+
+				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
+
+				const pdfReader = createReader(input)
+
+				//Quiero obtener el tamaño de la primera página
+				const page = pdfReader.parsePage(0)
+				const pageWidth = page.getMediaBox()[2]
+				const pageHeight = page.getMediaBox()[3]
+				console.log("pageWidth:", pageWidth)
+				console.log("pageHeight:", pageHeight)
+
+				//Quiero agregar una página al final del documento
+
+				const nuevoPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
+
+				// Header
+				pdfWriter
+					.startPageContentContext(nuevoPage)
+					.drawImage(
+						25,
+						pageHeight - (15 * 4),
+						"assets/images/png/logoFirmEasy.png",
+						{
+							transformation:
+							{
+								width: 110,
+								height: 110 / 2,
+								proportional: true,
+								fit: "always",
+							}
+						})
+					.writeText("Resumen de Firma",
+						25 + 110 + 12.5,
+						pageHeight - (15 * 4) + 8,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
+							),
+							size: 13,
+							colorspace: "gray",
+							color: 0x000000,
+						})
+					.writeText("Fechas y Horas en UTC-05:00 (America/Lima)",
+						pageWidth - 25 - 215,
+						pageHeight - (15 * 4) + 15,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
+							),
+							size: 8,
+							colorspace: "gray",
+							color: 0x000000,
+						})
+					.writeText("Ultima actualizacion en: November 3, 2023, 12:59",
+						pageWidth - 25 - 215,
+						pageHeight - (15 * 4) + 5,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
+							),
+							size: 8,
+							colorspace: "gray",
+							color: 0x000000,
+						})
+					.drawRectangle(
+						25,
+						pageHeight - (15 * 4) - 15,
+						pageWidth - 25 - 25,
+						1,
+						{
+							colorspace: "gray",
+							color: 0x000000,
+						})
+
+				pdfWriter
+					.startPageContentContext(nuevoPage)
 					.writeText(signature_params.company_name,
 						25,
 						15,
@@ -110,22 +263,29 @@ export class PDFEditor {
 							color: 0x7c7c7c,
 						})
 
-				pageModifier
-					.endContext()
-					.writePage()
-			}
+				pdfWriter.writePage(nuevoPage)
+				console.log("pageCount:", (pageHeight - 15))
+				pdfWriter.end()
 
-			pdfWriter.end()
-			
-			outStream.close()
-			inStream.close()	
-				
-			console.log("PDF firmado :" + this.eventEmitir)
+				// outStream.close()
+				// inStream.close()
+			})
 
-			// return "tmp/output_PDF/" + signature_params.file_token + "_signed.pdf"	
-			// return "tmp/output_PDF/" + this.uuid + "_signed.pdf"
-			// return process.cwd() + "/tmp/output_PDF/" + signature_params.file_token + "_signed.pdf"
-			return path_file
+			inStream.pipe(outStream)
+
+			return await new Promise<string>((resolve, reject) => {
+				outStream.on("finish", () => {
+					console.log(`PDF guardado en ${output}`)
+					outStream.close()
+					inStream.close()
+					resolve(output)
+				})
+
+				outStream.on("error", (err) => {
+					console.error("Error al escribir el archivo:", err)
+					reject(err)
+				})
+			})
 
 		} catch (error) {
 			this.loggerRepository.error(error)
@@ -133,73 +293,5 @@ export class PDFEditor {
 			return undefined
 		}
 
-	}
-
-	async addSummarySignature(
-		path_file: string,
-		signature_params: SignatureParams, 
-		path_signature: string
-	) {
-		
-		try {
-			
-			const inStream = new PDFRStreamForFile(
-				process.cwd() + "/" + path_file
-			)
-
-			const outStream = new PDFWStreamForFile(
-				// process.cwd() + "/tmp/output_PDF/" + signature_params.file_token + "_summary.pdf"
-				// process.cwd() + "/tmp/output_PDF/" + this.uuid + "_summary.pdf"
-				process.cwd() + "/" + path_file
-			)
-
-			const pdfWriter = createWriterToModify(inStream, outStream)
-
-			const pdfReader = createReader(process.cwd() + "/" + path_file)
-
-			// const token = signature_params.file_token
-
-			//Quiero obtener el tamaño de la primera página
-			const page = pdfReader.parsePage(0)
-			const pageWidth = page.getMediaBox()[2]
-			const pageHeight = page.getMediaBox()[3]
-			console.log(pageWidth, pageHeight)
-
-			//Quiero agregar una página al final del documento
-
-			const nuevoPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
-
-			pdfWriter
-				.startPageContentContext(nuevoPage)
-				.writeText(signature_params.company_name,
-					25,
-					15,
-					{
-						font: pdfWriter.getFontForFile(
-							process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
-						),
-						size: 8,
-						colorspace: "gray",
-						color: 0x747474,
-					})
-
-			pdfWriter.writePage(nuevoPage)
-			
-			pdfWriter.end()
-			
-			outStream.close()
-			inStream.close()
-			
-
-			// return "tmp/output_PDF/" + signature_params.file_token + "_summary.pdf"
-			// return "tmp/output_PDF/" + this.uuid + "_summary.pdf"
-			return path_file
-			
-		} catch (error) {
-			this.loggerRepository.error(error)
-			console.error("Error:", error)
-			return undefined
-		}
-	
 	}
 }
