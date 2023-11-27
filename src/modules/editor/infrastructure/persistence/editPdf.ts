@@ -11,15 +11,18 @@ type Params = {
 };
 
 type SignatureParams = {
+	original_filename: string;
 	signature_filename: string;
 	path_signature: string;
-	qr_filename?: string;
+	qr_filename: string;
 	mm: number;
 	eje_x: number;
 	eje_y: number;
 	page: number;
 	company_name: string;
 	file_token: string;
+	time_zone: string;
+	lastUpdate: string;
 };
 
 export class PDFEditor {
@@ -166,12 +169,15 @@ export class PDFEditor {
 
 				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
 
-				const pdfReader = createReader(input)
+				// const pdfReader = createReader(input)
 
 				//Quiero obtener el tamaño de la primera página
-				const page = pdfReader.parsePage(0)
-				const pageWidth = page.getMediaBox()[2]
-				const pageHeight = page.getMediaBox()[3]
+				// const page = pdfReader.parsePage(0)
+				// const pageWidth = page.getMediaBox()[2]
+				// const pageHeight = page.getMediaBox()[3]
+				
+				const pageWidth = 595
+				const pageHeight = 842
 				console.log("pageWidth:", pageWidth)
 				console.log("pageHeight:", pageHeight)
 
@@ -196,18 +202,18 @@ export class PDFEditor {
 							}
 						})
 					.writeText("Resumen de Firma",
-						25 + 110 + 12.5,
+						25 + 110 + 25,
 						pageHeight - (15 * 4) + 8,
 						{
 							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
+								process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
 							),
 							size: 13,
 							colorspace: "gray",
 							color: 0x000000,
 						})
-					.writeText("Fechas y Horas en UTC-05:00 (America/Lima)",
-						pageWidth - 25 - 215,
+					.writeText(signature_params.time_zone,
+						pageWidth - 25 - 195,
 						pageHeight - (15 * 4) + 15,
 						{
 							font: pdfWriter.getFontForFile(
@@ -217,8 +223,8 @@ export class PDFEditor {
 							colorspace: "gray",
 							color: 0x000000,
 						})
-					.writeText("Ultima actualizacion en: November 3, 2023, 12:59",
-						pageWidth - 25 - 215,
+					.writeText(signature_params.lastUpdate,
+						pageWidth - 25 - 195,
 						pageHeight - (15 * 4) + 5,
 						{
 							font: pdfWriter.getFontForFile(
@@ -235,7 +241,38 @@ export class PDFEditor {
 						1,
 						{
 							colorspace: "gray",
+							color: 0x31293F,
+							type: "fill",
+							
+						})
+
+				// File & QRCode
+
+				pdfWriter
+					.startPageContentContext(nuevoPage)
+					.writeText(signature_params.original_filename,
+						25,
+						pageHeight - (15 * 4) - 45,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-Medium.ttf"
+							),
+							size: 15,
+							colorspace: "gray",
 							color: 0x000000,
+						})
+					.drawImage(
+						pageWidth - 25 - 85,
+						pageHeight - (15 * 4) - 30 - 75,
+						signature_params.qr_filename,
+						{
+							transformation:
+							{
+								width: 75,
+								height: 75,
+								proportional: true,
+								fit: "always",
+							}
 						})
 
 				pdfWriter

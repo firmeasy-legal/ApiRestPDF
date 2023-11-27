@@ -63,7 +63,11 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 
 		filerepository.deleteFile(path_file)
 		filerepository.deleteFile(signature_params.path_signature)
-		// filerepository.deleteFile(signature_params.qr_filename)
+		
+		if(signature_params.qr_filename && signature_params.qr_filename !== null) {
+			filerepository.deleteFile(signature_params.qr_filename)
+		}
+
 		filerepository.deleteFile(pdf_signed)
 
 	} catch (error) {
