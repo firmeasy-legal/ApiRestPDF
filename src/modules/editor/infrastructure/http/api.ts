@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express"
 import { pdfEditor, s3Repository } from "@/shared/infrastructure/container"
 
 import { filerepository } from "@/shared/infrastructure/container"
+import fs from "node:fs"
 import { loggerRepository } from "@/shared/infrastructure/container"
 
 const apiRouter = Router()
@@ -10,6 +11,7 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 
 	const {
 		origin_filename,
+		file_token,
 		signature_params
 	} = req.body
 
@@ -31,20 +33,16 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 			})
 		}
 
-		if(signature_params.qr_filename && signature_params.qr_filename !== null) {
-			const path_qr_image = await s3Repository.getTempPathFromURI_PNG(`public${signature_params.qr_filename}`)
-			
-			if (!path_qr_image) {
-				return res.status(401).json({
-					message: "Hubo un error al obtener el QR"
-				})
-			}
-			
-			signature_params.qr_filename = path_qr_image
+		signature_params.qr_filename = await s3Repository.getTempPathFromURI_PNG(`public${signature_params.qr_filename}`)
+
+		if (!signature_params.qr_filename) {
+			return res.status(401).json({
+				message: "Hubo un error al obtener el QR"
+			})
 		}
 
 		const pdf_signed = await pdfEditor.addInitialSignature(path_file, signature_params)
-		
+
 		if (!pdf_signed) {
 			return res.status(401).json({
 				message: "Hubo un error al procesar el PDF no firmado"
@@ -53,22 +51,33 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 
 		const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
 
+		if (!pdf_summary_added) {
+			return res.status(401).json({
+				message: "Hubo un error al procesar el PDF firmado"
+			})
+		}
+
+		const new_path = await s3Repository.addFileToS3(pdf_summary_added, file_token)
+
+		// res.json({
+		// 	message: "PDF obtenido correctamente",
+		// 	signature_params,
+		// 	path_file,
+		// 	pdf_signed,
+		// 	pdf_summary_added,
+		// 	new_path,
+		// 	file_token
+		// })
+		
 		res.json({
-			message: "PDF obtenido correctamente",
-			signature_params,
-			path_file,
-			pdf_signed,
-			pdf_summary_added
+			new_path
 		})
 
 		filerepository.deleteFile(path_file)
 		filerepository.deleteFile(signature_params.path_signature)
-		
-		if(signature_params.qr_filename && signature_params.qr_filename !== null) {
-			filerepository.deleteFile(signature_params.qr_filename)
-		}
-
+		filerepository.deleteFile(signature_params.qr_filename)
 		filerepository.deleteFile(pdf_signed)
+		filerepository.deleteFile(pdf_summary_added)
 
 	} catch (error) {
 		loggerRepository.error(error)

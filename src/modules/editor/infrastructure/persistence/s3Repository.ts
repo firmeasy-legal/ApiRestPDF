@@ -1,5 +1,6 @@
 import {
 	GetObjectCommand,
+	PutObjectCommand,
 	S3Client
 } from "@aws-sdk/client-s3"
 
@@ -111,6 +112,45 @@ export class S3Repository {
 			console.error("Error:", error)
 			return undefined
 		}
+	}
+
+	async addFileToS3(filePath: string, file_token: string): Promise<string | undefined> {
+		
+		const fileContent = fs.readFileSync(process.cwd() + "/" + filePath)
+
+		if (!fileContent) {
+			return undefined
+		}
+
+		const new_filename = `${Date.now()}-${Math.random().toString(36).substring(2, 12)}.pdf`
+
+		const fileKey = `public/${file_token}/${new_filename}`
+		
+		const params = {
+			Bucket: process.env.AWS_BUCKET,
+			Key: fileKey,
+			Body: fileContent,
+			Metadata: {
+				"Content-Type": "application/pdf"
+			}	
+		}
+
+		try {
+			const command = new PutObjectCommand(params)
+			const response = await this.s3Client.send(command)
+
+			if (response.$metadata.httpStatusCode !== 200) {
+				return undefined
+			}
+			
+			return fileKey
+			
+		} catch (error) {
+			this.loggerRepository.error(error)
+			console.error("Error:", error)
+			return undefined
+		}
+
 	}
 
 }

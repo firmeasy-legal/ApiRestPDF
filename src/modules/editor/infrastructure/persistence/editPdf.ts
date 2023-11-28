@@ -60,7 +60,7 @@ export class PDFEditor {
 			const inStream = fs.createReadStream(input)
 			const outStream = fs.createWriteStream(process.cwd() + "/" + output)
 
-			outStream.on("close", () => {
+			outStream.on("finish", () => {
 
 				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
 
@@ -133,10 +133,10 @@ export class PDFEditor {
 			inStream.pipe(outStream)
 
 			return await new Promise<string>((resolve, reject) => {
-				outStream.on("finish", () => {
+				outStream.on("close", () => {
 					console.log(`PDF guardado en ${output}`)
-					outStream.close()
-					inStream.close()
+					// outStream.close()
+					// inStream.close()
 					resolve(output)
 				})
 
@@ -173,7 +173,7 @@ export class PDFEditor {
 
 			const token = signature_params.file_token
 
-			outStream.on("close", () => {
+			outStream.on("finish", () => {
 
 				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
 
@@ -209,7 +209,7 @@ export class PDFEditor {
 								fit: "always",
 							}
 						})
-					.writeText("Resumen de Firma",
+					.writeText("Huella de Auditoría",
 						25 + 110 + 25,
 						pageHeight - (15 * 4) + 8,
 						{
@@ -269,7 +269,7 @@ export class PDFEditor {
 							colorspace: "gray",
 							color: 0x000000,
 						})
-					.writeText("Número de Documento ",
+					.writeText("ID del Documento ",
 						25 + 10,
 						pageHeight - (15 * 4) - 80,
 						{
@@ -281,7 +281,7 @@ export class PDFEditor {
 							color: 0x505050,
 						})
 					.writeText(token,
-						25 + 10 + 95,
+						25 + 10 + 70,
 						pageHeight - (15 * 4) - 80,
 						{
 							font: pdfWriter.getFontForFile(
@@ -319,7 +319,7 @@ export class PDFEditor {
 				/* Detalle del firmante */
 				pdfWriter
 					.startPageContentContext(nuevoPage)
-					.writeText("Detalle de Firma",
+					.writeText("Identificación del Firmante",
 						25,
 						pageHeight - (15 * 4) - 145,
 						{
@@ -420,7 +420,7 @@ export class PDFEditor {
 							colorspace: "gray",
 							color: 0x262626,
 						})
-					.writeText("FirmEasy ID: " + signature_params.signer_ID,
+					.writeText("Firmante ID: " + signature_params.signer_ID,
 						25 + 25 + 10,
 						pageHeight - (15 * 4) - 280,
 						{
@@ -452,16 +452,16 @@ export class PDFEditor {
 								fit: "always",
 							}
 						})
-					.writeText("Firma de: " + signature_params.signer_name,
-						pageWidth - 25 - 195,
-						pageHeight - (15 * 4) - 235 + 10 + 140 / 2 + 10,
+					.writeText("Firma Ológrafa",
+						pageWidth - 25 - 155,
+						pageHeight - (15 * 4) - 248,
 						{
 							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
+								process.cwd() + "/assets/fonts/NotoSans-Medium.ttf"
 							),
-							size: 9,
-							colorspace: "gray",
-							color: 0xffffff,
+							size: 8,
+							// colorspace: "gray",
+							color: 0x031215,
 						})
 					.drawRectangle(
 						25,
@@ -475,12 +475,12 @@ export class PDFEditor {
 
 						})
 						
-				const height = pageHeight - (15 * 4) - 315
+				const height = pageHeight - (15 * 4) - 320
 
 				/*Add Link QR*/
 				pdfWriter
 					.startPageContentContext(nuevoPage)
-					.writeText("Integridad Documental: "+signature_params.qr_link,
+					.writeText("Validación Documental: "+signature_params.qr_link,
 						25,
 						height,
 						{
@@ -528,10 +528,10 @@ export class PDFEditor {
 			inStream.pipe(outStream)
 
 			return await new Promise<string>((resolve, reject) => {
-				outStream.on("finish", () => {
+				outStream.on("close", () => {
 					console.log(`PDF guardado en ${output}`)
-					outStream.close()
-					inStream.close()
+					// outStream.finish()
+					// inStream.close()
 					resolve(output)
 				})
 
