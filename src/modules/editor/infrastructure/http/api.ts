@@ -2,22 +2,25 @@ import { Request, Response, Router } from "express"
 import { pdfEditor, s3Repository } from "@/shared/infrastructure/container"
 
 import { filerepository } from "@/shared/infrastructure/container"
-import fs from "node:fs"
 import { loggerRepository } from "@/shared/infrastructure/container"
 
 const apiRouter = Router()
 
-apiRouter.post("/getPdf", async (req: Request, res: Response) => {
+apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 
 	const {
 		origin_filename,
-		file_token,
+		file_path,
 		signature_params
 	} = req.body
 
 	try {
 
-		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${origin_filename}`)
+		const normalizedFilePath = file_path.startsWith("/") ? file_path.slice(1) : file_path
+
+		const normalizedFilename = origin_filename.startsWith("/") ? origin_filename.slice(1) : origin_filename
+
+		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${normalizedFilename}`)
 
 		if (!path_file) {
 			return res.status(401).json({
@@ -57,7 +60,7 @@ apiRouter.post("/getPdf", async (req: Request, res: Response) => {
 			})
 		}
 
-		const new_path = await s3Repository.addFileToS3(pdf_summary_added, file_token)
+		const new_path = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
 
 		// res.json({
 		// 	message: "PDF obtenido correctamente",

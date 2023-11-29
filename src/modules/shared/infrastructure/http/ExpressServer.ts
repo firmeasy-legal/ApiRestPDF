@@ -1,6 +1,7 @@
 import express, { Router } from "express"
 
 import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
+import cors from "cors"
 import { morganLoggerMiddleware } from "./httpLoggerFunction"
 
 type Params = {
@@ -20,6 +21,15 @@ export class ExpressServer {
 		server.use(express.json({
 			limit: "1gb"
 		}))
+
+		server.use(cors(
+			{
+				origin: "*",
+				methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+				preflightContinue: false,
+				optionsSuccessStatus: 204,
+			}
+		))
 
 		server.use(morganLoggerMiddleware({ loggerRepository }))
 		

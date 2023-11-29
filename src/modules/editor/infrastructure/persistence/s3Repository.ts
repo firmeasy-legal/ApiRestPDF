@@ -114,7 +114,7 @@ export class S3Repository {
 		}
 	}
 
-	async addFileToS3(filePath: string, file_token: string): Promise<string | undefined> {
+	async addFileToS3(filePath: string, file_path: string): Promise<string | undefined> {
 		
 		const fileContent = fs.readFileSync(process.cwd() + "/" + filePath)
 
@@ -124,7 +124,7 @@ export class S3Repository {
 
 		const new_filename = `${Date.now()}-${Math.random().toString(36).substring(2, 12)}.pdf`
 
-		const fileKey = `public/${file_token}/${new_filename}`
+		const fileKey = `public/${file_path}/${new_filename}`
 		
 		const params = {
 			Bucket: process.env.AWS_BUCKET,
