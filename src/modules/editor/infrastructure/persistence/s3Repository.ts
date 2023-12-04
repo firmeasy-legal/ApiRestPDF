@@ -114,12 +114,12 @@ export class S3Repository {
 		}
 	}
 
-	async addFileToS3(filePath: string, file_path: string): Promise<string | undefined> {
+	async addFileToS3(filePath: string, file_path: string): Promise<{ fileKey: string, new_filename: string, file_path: string } | undefined> {
 		
 		const fileContent = fs.readFileSync(process.cwd() + "/" + filePath)
 
 		if (!fileContent) {
-			return undefined
+			new Error("No se pudo leer el archivo")
 		}
 
 		const new_filename = `${Date.now()}-${Math.random().toString(36).substring(2, 12)}.pdf`
@@ -140,15 +140,19 @@ export class S3Repository {
 			const response = await this.s3Client.send(command)
 
 			if (response.$metadata.httpStatusCode !== 200) {
-				return undefined
+				new Error("No se pudo guardar el archivo")
 			}
 			
-			return fileKey
+			return {
+				fileKey,
+				new_filename,
+				file_path
+			}
 			
 		} catch (error) {
 			this.loggerRepository.error(error)
 			console.error("Error:", error)
-			return undefined
+			new Error("No se pudo guardar el archivo")
 		}
 
 	}

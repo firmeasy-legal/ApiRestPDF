@@ -20,6 +20,8 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 
 		const normalizedFilename = origin_filename.startsWith("/") ? origin_filename.slice(1) : origin_filename
 
+		const normalizesQRFilename = signature_params.qr_filename.startsWith("/") ? signature_params.qr_filename.slice(1) : signature_params.qr_filename
+
 		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${normalizedFilename}`)
 
 		if (!path_file) {
@@ -36,7 +38,7 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 			})
 		}
 
-		signature_params.qr_filename = await s3Repository.getTempPathFromURI_PNG(`public${signature_params.qr_filename}`)
+		signature_params.qr_filename = await s3Repository.getTempPathFromURI_PNG(`public/${normalizesQRFilename}`)
 
 		if (!signature_params.qr_filename) {
 			return res.status(401).json({
@@ -60,7 +62,7 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 			})
 		}
 
-		const new_path = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
+		const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
 
 		// res.json({
 		// 	message: "PDF obtenido correctamente",
@@ -71,10 +73,21 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 		// 	new_path,
 		// 	file_token
 		// })
-		
-		res.json({
-			new_path
-		})
+
+		if (result === undefined) {
+			res.status(500).json({
+				error: "Ocurrió un error al guardar el archivo en S3",
+				message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
+			})
+		} else {
+			const { fileKey, new_filename, file_path } = result
+
+			res.json({
+				completePath: fileKey,
+				new_filename,
+				file_path
+			})
+		}
 
 		filerepository.deleteFile(path_file)
 		filerepository.deleteFile(signature_params.path_signature)
