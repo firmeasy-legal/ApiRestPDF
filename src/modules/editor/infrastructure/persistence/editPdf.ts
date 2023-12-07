@@ -548,4 +548,94 @@ export class PDFEditor {
 		}
 
 	}
+
+	async addDigitalQRCode(
+		path_file: string,
+		qr_path: string,
+		qr_code: string
+	): Promise<string | undefined> {
+		
+		try {
+
+			console.log("====================================================================================================")
+			console.log("=================================== Starding add digital QRCode in PDF =============================")
+			console.log("====================================================================================================")
+
+			const input = process.cwd() + "/" + path_file
+			const output = "tmp/output_PDF/" + this.uuid + "_qr.pdf"
+
+			const inStream = fs.createReadStream(input)
+			const outStream = fs.createWriteStream(process.cwd() + "/" + output)
+
+			outStream.on("finish", () => {
+
+				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
+
+				const pdfReader = createReader(input)
+
+				const page = pdfReader.parsePage(0)
+				// const pageWidth = page.getMediaBox()[2]
+				const pageHeight = page.getMediaBox()[3]
+
+				const pageModifier = new PDFPageModifier(pdfWriter, 0)
+
+				pageModifier
+					.startContext()
+					.getContext()
+					.writeText("Code: " + qr_code,
+						1,
+						pageHeight - 5,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
+							),
+							size: 6,
+							colorspace: "gray",
+							color: 0x000000,
+						})
+					.drawImage(
+						1,
+						pageHeight - 5 - 48,
+						qr_path,
+						{
+							transformation:
+							{
+								width: 45,
+								height: 45,
+								proportional: true,
+								fit: "always",
+							}
+						})
+				
+				pageModifier
+					.endContext()
+					.writePage()
+					
+				pdfWriter.end()
+			})
+
+			inStream.pipe(outStream)
+
+			return await new Promise<string>((resolve, reject) => {
+				outStream.on("close", () => {
+					console.log(`PDF guardado en ${output}`)
+					// outStream.close()
+					// inStream.close()
+					resolve(output)
+				})
+
+				outStream.on("error", (err) => {
+					console.error("Error al escribir el archivo:", err)
+					reject(err)
+				})
+			})
+
+		} catch (error) {
+			this.loggerRepository.error(error)
+			console.error("Error:", error)
+			return undefined
+		}
+	}
 }
+
+

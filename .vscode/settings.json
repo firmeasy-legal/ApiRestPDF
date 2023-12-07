@@ -23,7 +23,7 @@
 	"editor.insertSpaces": false,
 	"editor.inlayHints.enabled": "on",
 	"editor.codeActionsOnSave": {
-		"source.organizeImports": true
+		"source.organizeImports": "explicit"
 	},
 	"typescript.inlayHints.enumMemberValues.enabled": true,
 	"typescript.inlayHints.functionLikeReturnTypes.enabled": true,

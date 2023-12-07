@@ -28,7 +28,7 @@
 		"express": "4.18.2",
 		"jsonwebtoken": "9.0.2",
 		"morgan": "1.10.0",
-		"muhammara": "^4.0.0",
+		"muhammara": "4.0.0",
 		"winston": "3.11.0",
 		"yup": "1.3.2"
 	},
