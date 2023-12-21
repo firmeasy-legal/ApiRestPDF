@@ -1,4 +1,4 @@
-import { PDFPageModifier, createReader, createWriterToModify } from "muhammara"
+import { PDFPageModifier, createReader, createWriter, createWriterToModify, eRangeTypeSpecific } from "muhammara"
 
 import { EventEmitter } from "node:events"
 import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
@@ -57,94 +57,175 @@ export class PDFEditor {
 			const input = process.cwd() + "/" + path_file
 			const output = "tmp/output_PDF/" + signature_params.file_token + "_signed.pdf"
 
-			const inStream = fs.createReadStream(input)
-			const outStream = fs.createWriteStream(process.cwd() + "/" + output)
+			const pdfWriter = createWriter(output)
 
-			outStream.on("finish", () => {
+			const pdfReader = createReader(input)
 
-				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
+			const pageCount = pdfReader.getPagesCount()
 
-				const pdfReader = createReader(input)
+			const token = signature_params.file_token
+			
+			for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+				
+				const page = pdfReader.parsePage(pageIndex)
+				const pageWidth = page.getMediaBox()[2]
+				const pageHeight = page.getMediaBox()[3]
 
-				const pageCount = pdfReader.getPagesCount()
+				const newPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
 
-				const token = signature_params.file_token
+				const contentContext = pdfWriter
+					.startPageContentContext(newPage)
+					.q()
+					
+				pdfWriter.mergePDFPagesToPage(
+					newPage,
+					input,
+					{ type: eRangeTypeSpecific, specificRanges: [[pageIndex, pageIndex]] }
+				)
 
-				for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-
-					const pageModifier = new PDFPageModifier(pdfWriter, pageIndex)
-
-					if (signature_params.page === pageIndex + 1) {
-
-						pageModifier
-							.startContext()
-							.getContext()
-							.drawImage(signature_params.eje_x,
-								signature_params.eje_y * signature_params.mm,
-								signature_params.path_signature,
+				if (signature_params.page === pageIndex + 1) {
+					contentContext
+						.Q()
+						.q()
+						.drawImage(signature_params.eje_x,
+							signature_params.eje_y * signature_params.mm,
+							signature_params.path_signature,
+							{
+								transformation:
 								{
-									transformation:
-									{
-										width: 140,
-										height: 140 / 2,
-										proportional: true,
-										fit: "always",
-									}
-								})
-					}
-
-					pageModifier
-						.startContext()
-						.getContext()
-						.writeText(signature_params.company_name,
-							25,
-							15,
-							{
-								font: pdfWriter.getFontForFile(
-									process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
-								),
-								size: 8,
-								colorspace: "gray",
-								color: 0x747474,
+									width: 140,
+									height: 140 / 2,
+									proportional: true,
+									fit: "always",
+								}
 							})
-						.writeText(token,
-							25 + 42,
-							15,
-							{
-								font: pdfWriter.getFontForFile(
-									process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-								),
-								size: 7,
-								colorspace: "gray",
-								color: 0x7c7c7c,
-							})
-
-					pageModifier
-						.endContext()
-						.writePage()
+						.Q()
 				}
 
-				pdfWriter.end()
+				contentContext
+					.Q()
+					.q()
+					.writeText(signature_params.company_name,
+						25,
+						15,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
+							),
+							size: 8,
+							colorspace: "gray",
+							color: 0x747474,
+						})
+					.writeText(token,
+						25 + 42,
+						15,
+						{
+							font: pdfWriter.getFontForFile(
+								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
+							),
+							size: 7,
+							colorspace: "gray",
+							color: 0x7c7c7c,
+						})
+					.Q()
 
-				// outStream.close()
-				// inStream.close()
-			})
+				pdfWriter
+					.writePage(newPage)
+			}
 
-			inStream.pipe(outStream)
+			pdfWriter
+				.end()
 
-			return await new Promise<string>((resolve, reject) => {
-				outStream.on("close", () => {
-					console.log(`PDF guardado en ${output}`)
-					// outStream.close()
-					// inStream.close()
-					resolve(output)
-				})
+			return output
+			
+			// const inStream = fs.createReadStream(input)
+			// const outStream = fs.createWriteStream(process.cwd() + "/" + output)
 
-				outStream.on("error", (err) => {
-					console.error("Error al escribir el archivo:", err)
-					reject(err)
-				})
-			})
+			// outStream.on("finish", () => {
+
+			// 	const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
+
+			// 	const pdfReader = createReader(input)
+
+			// 	const pageCount = pdfReader.getPagesCount()
+
+			// 	const token = signature_params.file_token
+
+			// 	for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+
+			// 		const pageModifier = new PDFPageModifier(pdfWriter, pageIndex)
+
+			// 		if (signature_params.page === pageIndex + 1) {
+
+			// 			pageModifier
+			// 				.startContext()
+			// 				.getContext()
+			// 				.drawImage(signature_params.eje_x,
+			// 					signature_params.eje_y * signature_params.mm,
+			// 					signature_params.path_signature,
+			// 					{
+			// 						transformation:
+			// 						{
+			// 							width: 140,
+			// 							height: 140 / 2,
+			// 							proportional: true,
+			// 							fit: "always",
+			// 						}
+			// 					})
+			// 		}
+
+			// 		pageModifier
+			// 			.startContext()
+			// 			.getContext()
+			// 			.writeText(signature_params.company_name,
+			// 				25,
+			// 				15,
+			// 				{
+			// 					font: pdfWriter.getFontForFile(
+			// 						process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
+			// 					),
+			// 					size: 8,
+			// 					colorspace: "gray",
+			// 					color: 0x747474,
+			// 				})
+			// 			.writeText(token,
+			// 				25 + 42,
+			// 				15,
+			// 				{
+			// 					font: pdfWriter.getFontForFile(
+			// 						process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
+			// 					),
+			// 					size: 7,
+			// 					colorspace: "gray",
+			// 					color: 0x7c7c7c,
+			// 				})
+
+			// 		pageModifier
+			// 			.endContext()
+			// 			.writePage()
+			// 	}
+
+			// 	pdfWriter.end()
+
+			// 	// outStream.close()
+			// 	// inStream.close()
+			// })
+
+			// inStream.pipe(outStream)
+
+			// return await new Promise<string>((resolve, reject) => {
+			// 	outStream.on("close", () => {
+			// 		console.log(`PDF guardado en ${output}`)
+			// 		// outStream.close()
+			// 		// inStream.close()
+			// 		resolve(output)
+			// 	})
+
+			// 	outStream.on("error", (err) => {
+			// 		console.error("Error al escribir el archivo:", err)
+			// 		reject(err)
+			// 	})
+			// })
 
 		} catch (error) {
 			this.loggerRepository.error(error)
