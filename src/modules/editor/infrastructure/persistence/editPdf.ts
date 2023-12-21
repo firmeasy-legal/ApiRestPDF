@@ -28,7 +28,7 @@ type SignatureParams = {
 	signer_ID: string;
 	signer_phone: string;
 	signer_device: string;
-	signer_IP: string;	
+	signer_IP: string;
 	signer_date: string;
 	qr_link: string;
 };
@@ -64,9 +64,9 @@ export class PDFEditor {
 			const pageCount = pdfReader.getPagesCount()
 
 			const token = signature_params.file_token
-			
+
 			for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-				
+
 				const page = pdfReader.parsePage(pageIndex)
 				const pageWidth = page.getMediaBox()[2]
 				const pageHeight = page.getMediaBox()[3]
@@ -76,7 +76,7 @@ export class PDFEditor {
 				const contentContext = pdfWriter
 					.startPageContentContext(newPage)
 					.q()
-					
+
 				pdfWriter.mergePDFPagesToPage(
 					newPage,
 					input,
@@ -137,7 +137,7 @@ export class PDFEditor {
 				.end()
 
 			return output
-			
+
 			// const inStream = fs.createReadStream(input)
 			// const outStream = fs.createWriteStream(process.cwd() + "/" + output)
 
@@ -555,13 +555,13 @@ export class PDFEditor {
 							type: "fill",
 
 						})
-						
+
 				const height = pageHeight - (15 * 4) - 320
 
 				/*Add Link QR*/
 				pdfWriter
 					.startPageContentContext(nuevoPage)
-					.writeText("Validación Documental: "+signature_params.qr_link,
+					.writeText("Validación Documental: " + signature_params.qr_link,
 						25,
 						height,
 						{
@@ -571,7 +571,7 @@ export class PDFEditor {
 							size: 8,
 							// colorspace: "gray",
 							color: 0x333333,
-						})	
+						})
 
 				pdfWriter
 					.startPageContentContext(nuevoPage)
@@ -635,7 +635,7 @@ export class PDFEditor {
 		qr_path: string,
 		qr_code: string
 	): Promise<string | undefined> {
-		
+
 		try {
 
 			console.log("====================================================================================================")
@@ -645,71 +645,127 @@ export class PDFEditor {
 			const input = process.cwd() + "/" + path_file
 			const output = "tmp/output_PDF/" + this.uuid + "_qr.pdf"
 
-			const inStream = fs.createReadStream(input)
-			const outStream = fs.createWriteStream(process.cwd() + "/" + output)
+			const pdfWriter = createWriter(output)
 
-			outStream.on("finish", () => {
+			const pdfReader = createReader(input)
 
-				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
+			// const pageCount = pdfReader.getPagesCount()
 
-				const pdfReader = createReader(input)
+			const page = pdfReader.parsePage(0)
+			const pageWidth = page.getMediaBox()[2]
+			const pageHeight = page.getMediaBox()[3]
 
-				const page = pdfReader.parsePage(0)
-				// const pageWidth = page.getMediaBox()[2]
-				const pageHeight = page.getMediaBox()[3]
+			const newPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
 
-				const pageModifier = new PDFPageModifier(pdfWriter, 0)
+			const contentContext = pdfWriter
+				.startPageContentContext(newPage)
+				.q()
 
-				pageModifier
-					.startContext()
-					.getContext()
-					.writeText("Code: " + qr_code,
-						1,
-						pageHeight - 5,
+			pdfWriter.mergePDFPagesToPage(
+				newPage,
+				input,
+				{ type: eRangeTypeSpecific, specificRanges: [[pageIndex, pageIndex]] }
+			)
+
+			contentContext
+				.Q()
+				.q()
+				.drawImage(
+					1,
+					pageHeight - 5 - 48,
+					qr_path,
+					{
+						transformation:
 						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
-							),
-							size: 6,
-							colorspace: "gray",
-							color: 0x000000,
-						})
-					.drawImage(
-						1,
-						pageHeight - 5 - 48,
-						qr_path,
-						{
-							transformation:
-							{
-								width: 45,
-								height: 45,
-								proportional: true,
-								fit: "always",
-							}
-						})
-				
-				pageModifier
-					.endContext()
-					.writePage()
-					
-				pdfWriter.end()
-			})
+							width: 45,
+							height: 45,
+							proportional: true,
+							fit: "always",
+						}
+					})
+				.writeText("Code: " + qr_code,
+					1,
+					pageHeight - 5,
+					{
+						font: pdfWriter.getFontForFile(
+							process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
+						),
+						size: 6,
+						colorspace: "gray",
+						color: 0x000000,
+					})
+				.Q()
 
-			inStream.pipe(outStream)
+			pdfWriter
+				.writePage(newPage)
 
-			return await new Promise<string>((resolve, reject) => {
-				outStream.on("close", () => {
-					console.log(`PDF guardado en ${output}`)
-					// outStream.close()
-					// inStream.close()
-					resolve(output)
-				})
+			return output
 
-				outStream.on("error", (err) => {
-					console.error("Error al escribir el archivo:", err)
-					reject(err)
-				})
-			})
+			// const inStream = fs.createReadStream(input)
+			// const outStream = fs.createWriteStream(process.cwd() + "/" + output)
+
+			// outStream.on("finish", () => {
+
+			// 	const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
+
+			// 	const pdfReader = createReader(input)
+
+			// 	const page = pdfReader.parsePage(0)
+			// 	// const pageWidth = page.getMediaBox()[2]
+			// 	const pageHeight = page.getMediaBox()[3]
+
+			// 	const pageModifier = new PDFPageModifier(pdfWriter, 0)
+
+			// 	pageModifier
+			// 		.startContext()
+			// 		.getContext()
+			// 		.writeText("Code: " + qr_code,
+			// 			1,
+			// 			pageHeight - 5,
+			// 			{
+			// 				font: pdfWriter.getFontForFile(
+			// 					process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
+			// 				),
+			// 				size: 6,
+			// 				colorspace: "gray",
+			// 				color: 0x000000,
+			// 			})
+			// 		.drawImage(
+			// 			1,
+			// 			pageHeight - 5 - 48,
+			// 			qr_path,
+			// 			{
+			// 				transformation:
+			// 				{
+			// 					width: 45,
+			// 					height: 45,
+			// 					proportional: true,
+			// 					fit: "always",
+			// 				}
+			// 			})
+
+			// 	pageModifier
+			// 		.endContext()
+			// 		.writePage()
+
+			// 	pdfWriter.end()
+			// })
+
+			// inStream.pipe(outStream)
+
+			// return await new Promise<string>((resolve, reject) => {
+			// 	outStream.on("close", () => {
+			// 		console.log(`PDF guardado en ${output}`)
+			// 		// outStream.close()
+			// 		// inStream.close()
+			// 		resolve(output)
+			// 	})
+
+			// 	outStream.on("error", (err) => {
+			// 		console.error("Error al escribir el archivo:", err)
+			// 		reject(err)
+			// 	})
+			// })
 
 		} catch (error) {
 			this.loggerRepository.error(error)
