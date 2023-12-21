@@ -1,4 +1,4 @@
-import { PDFPageModifier, createReader, createWriter, createWriterToModify, eRangeTypeSpecific } from "muhammara"
+import { createReader, createWriter, createWriterToModify, eRangeTypeSpecific } from "muhammara"
 
 import { EventEmitter } from "node:events"
 import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
@@ -664,7 +664,7 @@ export class PDFEditor {
 			pdfWriter.mergePDFPagesToPage(
 				newPage,
 				input,
-				{ type: eRangeTypeSpecific, specificRanges: [[pageIndex, pageIndex]] }
+				{ type: eRangeTypeSpecific, specificRanges: [[0, 0]] }
 			)
 
 			contentContext
