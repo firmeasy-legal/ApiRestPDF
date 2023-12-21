@@ -698,6 +698,7 @@ export class PDFEditor {
 
 			pdfWriter
 				.writePage(newPage)
+				.end()
 
 			return output
 

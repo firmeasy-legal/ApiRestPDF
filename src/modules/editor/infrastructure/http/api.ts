@@ -129,12 +129,19 @@ apiRouter.post("/addDigitalQR", async (req: Request, res: Response) => {
 		}
 
 		const pdf_signed = await pdfEditor.addDigitalQRCode(path_file, qr_path, qr_code)
-
+		
 		if (!pdf_signed) {
 			return res.status(401).json({
 				message: "Hubo un error al procesar el PDF no firmado"
 			})
 		}
+		
+		res.json({
+			message: "OK",
+			path_file,
+			qr_path,
+			pdf_signed
+		})
 
 		const result = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
 
