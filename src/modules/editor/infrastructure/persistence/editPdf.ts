@@ -31,6 +31,13 @@ type SignatureParams = {
 	signer_IP: string;
 	signer_date: string;
 	qr_link: string;
+	biometrico?: boolean;
+	imagen_dni_anverso?: string;
+	imagen_dni_reverso?: string;
+	imagen_firmante?: string;
+	path_dni_anverso?: string;
+	path_dni_reverso?: string;
+	path_imagen_firmante?: string;
 };
 
 export class PDFEditor {
@@ -257,13 +264,6 @@ export class PDFEditor {
 			outStream.on("finish", () => {
 
 				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
-
-				// const pdfReader = createReader(input)
-
-				//Quiero obtener el tamaño de la primera página
-				// const page = pdfReader.parsePage(0)
-				// const pageWidth = page.getMediaBox()[2]
-				// const pageHeight = page.getMediaBox()[3]
 
 				const pageWidth = 595
 				const pageHeight = 842
@@ -556,7 +556,96 @@ export class PDFEditor {
 
 						})
 
-				const height = pageHeight - (15 * 4) - 320
+				let height = pageHeight - (15 * 4) - 320
+
+				/*Agregar Fotos si es que tiene la opcion de biometrico*/
+				if (signature_params.biometrico) {
+					pdfWriter
+						.startPageContentContext(nuevoPage)
+						.writeText("Fotos del Firmante",
+							25,
+							height,
+							{
+								font: pdfWriter.getFontForFile(
+									process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
+								),
+								size: 12,
+								colorspace: "gray",
+								color: 0x000000,
+							})
+
+					if (signature_params.path_dni_anverso) {
+						pdfWriter
+							.startPageContentContext(nuevoPage)
+							.drawImage(
+								25 + 25 + 10,
+								height - 95,
+								signature_params.path_dni_anverso,
+								{
+									transformation:
+									{
+										width: 140,
+										height: 140 / 2,
+										proportional: true,
+										fit: "always",
+									}
+								})
+					}
+
+					if (signature_params.path_dni_reverso) {
+						pdfWriter
+							.startPageContentContext(nuevoPage)
+							.drawImage(
+								25 + 25 + 10 + 140 + 40,
+								height - 95,
+								signature_params.path_dni_reverso,
+								{
+									transformation:
+									{
+										width: 140,
+										height: 140 / 2,
+										proportional: true,
+										fit: "always",
+									}
+								})
+					}
+
+					if (signature_params.path_imagen_firmante) {
+						pdfWriter
+							.startPageContentContext(nuevoPage)
+							.drawImage(
+								25 + 25 + 10 + 140 + 40 + 140 + 40,
+								height - 95,
+								signature_params.path_imagen_firmante,
+								{
+									transformation:
+									{
+										width: 140,
+										height: 140 / 2,
+										proportional: true,
+										fit: "always",
+									}
+								})
+					}
+
+					height = height - 95 - 10 - 10
+
+					pdfWriter
+						.startPageContentContext(nuevoPage)
+						.drawRectangle(
+							25,
+							height,
+							pageWidth - 25 - 25,
+							1,
+							{
+								colorspace: "gray",
+								color: 0x31293F,
+								type: "fill",
+
+							})
+
+					height = height - 15
+				}
 
 				/*Add Link QR*/
 				pdfWriter

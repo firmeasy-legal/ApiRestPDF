@@ -16,6 +16,16 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 
 	try {
 
+		if (signature_params.biometrico) {
+			const normalized_dni_anverso = signature_params.imagen_dni_anverso.startsWith("/") ? signature_params.imagen_dni_anverso.slice(1) : signature_params.imagen_dni_anverso
+			const normalized_dni_reverso = signature_params.imagen_dni_reverso.startsWith("/") ? signature_params.imagen_dni_reverso.slice(1) : signature_params.imagen_dni_reverso
+			const normalized_imagen_firmante = signature_params.imagen_firmante.startsWith("/") ? signature_params.imagen_firmante.slice(1) : signature_params.imagen_firmante
+
+			signature_params.path_dni_anverso = await s3Repository.getTempPathFromURI_PNG(`public/${normalized_dni_anverso}`)
+			signature_params.path_dni_reverso = await s3Repository.getTempPathFromURI_PNG(`public/${normalized_dni_reverso}`)
+			signature_params.path_imagen_firmante = await s3Repository.getTempPathFromURI_PNG(`public/${normalized_imagen_firmante}`)
+		}
+
 		const normalizedFilePath = file_path.startsWith("/") ? file_path.slice(1) : file_path
 
 		const normalizedFilename = origin_filename.startsWith("/") ? origin_filename.slice(1) : origin_filename
@@ -62,28 +72,34 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 			})
 		}
 
-		const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
+		// const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
 
-		if (result === undefined) {
-			res.status(500).json({
-				error: "Ocurrió un error al guardar el archivo en S3",
-				message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
-			})
-		} else {
-			const { fileKey, new_filename, file_path } = result
+		// if (result === undefined) {
+		// 	res.status(500).json({
+		// 		error: "Ocurrió un error al guardar el archivo en S3",
+		// 		message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
+		// 	})
+		// } else {
+		// 	const { fileKey, new_filename, file_path } = result
 
-			res.json({
-				completePath: fileKey,
-				new_filename,
-				file_path
-			})
-		}
+		// 	res.json({
+		// 		completePath: fileKey,
+		// 		new_filename,
+		// 		file_path
+		// 	})
+		// }
 
 		filerepository.deleteFile(path_file)
 		filerepository.deleteFile(signature_params.path_signature)
 		filerepository.deleteFile(signature_params.qr_filename)
 		filerepository.deleteFile(pdf_signed)
-		filerepository.deleteFile(pdf_summary_added)
+		// filerepository.deleteFile(pdf_summary_added)
+
+		if (signature_params.biometrico) {
+			filerepository.deleteFile(signature_params.path_dni_anverso)
+			filerepository.deleteFile(signature_params.path_dni_reverso)
+			filerepository.deleteFile(signature_params.path_imagen_firmante)
+		}
 
 	} catch (error) {
 		loggerRepository.error(error)
