@@ -738,55 +738,65 @@ export class PDFEditor {
 
 			const pdfReader = createReader(input)
 
-			// const pageCount = pdfReader.getPagesCount()
+			const pageCount = pdfReader.getPagesCount()
 
-			const page = pdfReader.parsePage(0)
-			const pageWidth = page.getMediaBox()[2]
-			const pageHeight = page.getMediaBox()[3]
+			for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+				
+				const page = pdfReader.parsePage(pageIndex)
+				const pageWidth = page.getMediaBox()[2]
+				const pageHeight = page.getMediaBox()[3]
 
-			const newPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
+				const newPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
 
-			const contentContext = pdfWriter
-				.startPageContentContext(newPage)
-				.q()
+				const contentContext = pdfWriter
+					.startPageContentContext(newPage)
+					.q()
+				
+				pdfWriter.mergePDFPagesToPage(
+					newPage,
+					input,
+					{ type: eRangeTypeSpecific, specificRanges: [[pageIndex, pageIndex]] }
+				)
 
-			pdfWriter.mergePDFPagesToPage(
-				newPage,
-				input,
-				{ type: eRangeTypeSpecific, specificRanges: [[0, 0]] }
-			)
+				if (pageIndex === 0) {
+					contentContext
+						.Q()
+						.q()
+						.drawImage(
+							1,
+							pageHeight - 5 - 48,
+							qr_path,
+							{
+								transformation:
+								{
+									width: 45,
+									height: 45,
+									proportional: true,
+									fit: "always",
+								}
+							})
+						.writeText("Code: " + qr_code,
+							1,
+							pageHeight - 5,
+							{
+								font: pdfWriter.getFontForFile(
+									process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
+								),
+								size: 6,
+								colorspace: "gray",
+								color: 0x000000,
+							})
+						.Q()
 
-			contentContext
-				.Q()
-				.q()
-				.drawImage(
-					1,
-					pageHeight - 5 - 48,
-					qr_path,
-					{
-						transformation:
-						{
-							width: 45,
-							height: 45,
-							proportional: true,
-							fit: "always",
-						}
-					})
-				.writeText("Code: " + qr_code,
-					1,
-					pageHeight - 5,
-					{
-						font: pdfWriter.getFontForFile(
-							process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
-						),
-						size: 6,
-						colorspace: "gray",
-						color: 0x000000,
-					})
-				.Q()
-
+					pdfWriter
+						.writePage(newPage)
+				} else {
+					pdfWriter
+						.writePage(newPage)
+				}
+			}
+			
 			pdfWriter
-				.writePage(newPage)
 				.end()
 
 			return output
