@@ -33,7 +33,7 @@ dependencies:
     specifier: 1.10.0
     version: 1.10.0
   muhammara:
-    specifier: ^4.0.0
+    specifier: 4.0.0
     version: 4.0.0
   winston:
     specifier: 3.11.0
