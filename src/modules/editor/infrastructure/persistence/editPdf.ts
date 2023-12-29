@@ -1,13 +1,11 @@
-import { createReader, createWriter, createWriterToModify, eRangeTypeSpecific } from "muhammara"
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
-import { EventEmitter } from "node:events"
-import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
-import crypto from "node:crypto"
-import fs from "node:fs"
+import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
 
 type Params = {
 	loggerRepository: LoggerRepository;
-	eventEmitir: EventEmitter;
 };
 
 type SignatureParams = {
@@ -42,12 +40,10 @@ type SignatureParams = {
 
 export class PDFEditor {
 	private loggerRepository: LoggerRepository
-	private eventEmitir: EventEmitter
 	private uuid = crypto.randomUUID()
 
-	constructor({ loggerRepository, eventEmitir }: Params) {
+	constructor({ loggerRepository }: Params) {
 		this.loggerRepository = loggerRepository
-		this.eventEmitir = eventEmitir
 	}
 
 	async addInitialSignature(
@@ -64,175 +60,65 @@ export class PDFEditor {
 			const input = process.cwd() + "/" + path_file
 			const output = "tmp/output_PDF/" + signature_params.file_token + "_signed.pdf"
 
-			const pdfWriter = createWriter(output)
+			const existingPpfBytes = await fs.readFile(input)
 
-			const pdfReader = createReader(input)
+			const pdfDoc = await PDFDocument.load(existingPpfBytes)
+			const helvicaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+			const helvicaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-			const pageCount = pdfReader.getPagesCount()
+			const pages = pdfDoc.getPages()
 
 			const token = signature_params.file_token
 
-			for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+			//Imagenes
+			const signature_path = await fs.readFile(signature_params.path_signature)
+			const signature = await pdfDoc.embedPng(signature_path)
 
-				const page = pdfReader.parsePage(pageIndex)
-				const pageWidth = page.getMediaBox()[2]
-				const pageHeight = page.getMediaBox()[3]
+			console.log("Eje X: " + signature_params.eje_x)
+			console.log("Eje Y: " + signature_params.eje_y)
+			console.log("MM: " + signature_params.mm)
+			console.log("Page: " + signature_params.page)
+			console.log("Path: " + signature_params.path_signature)
 
-				const newPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
+			pages.forEach((page, index) => {
+				const { width, height } = page.getSize()
 
-				const contentContext = pdfWriter
-					.startPageContentContext(newPage)
-					.q()
+				// const pixelsToPointsRatio = 1.33
 
-				pdfWriter.mergePDFPagesToPage(
-					newPage,
-					input,
-					{ type: eRangeTypeSpecific, specificRanges: [[pageIndex, pageIndex]] }
-				)
+				const xInPoints = signature_params.eje_x
+				const yInPoints = height - signature_params.eje_y
 
-				if (signature_params.page === pageIndex + 1) {
-					contentContext
-						.Q()
-						.q()
-						.drawImage(signature_params.eje_x,
-							signature_params.eje_y * signature_params.mm,
-							signature_params.path_signature,
-							{
-								transformation:
-								{
-									width: 140,
-									height: 140 / 2,
-									proportional: true,
-									fit: "always",
-								}
-							})
-						.Q()
+				if (signature_params.page === index + 1) {
+					console.log("Entre a la pagina: " + index)
+					page.drawImage(signature, {
+						x: xInPoints,
+						y: yInPoints,
+						width: 140,
+						height: 140 / 2,
+					})
 				}
 
-				contentContext
-					.Q()
-					.q()
-					.writeText(signature_params.company_name,
-						25,
-						15,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x747474,
-						})
-					.writeText(token,
-						25 + 42,
-						15,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 7,
-							colorspace: "gray",
-							color: 0x7c7c7c,
-						})
-					.Q()
+				page.drawText(signature_params.company_name, {
+					x: 25,
+					y: 15,
+					size: 8,
+					font: helvicaBoldFont,
+					color: rgb(0.458, 0.455, 0.455),
+				})
+				page.drawText(token, {
+					x: 25 + 42,
+					y: 15,
+					size: 7,
+					font: helvicaFont,
+					color: rgb(0.533, 0.522, 0.561),
+				})
+			})
 
-				pdfWriter
-					.writePage(newPage)
-			}
+			const pdfBytes = await pdfDoc.save()
 
-			pdfWriter
-				.end()
+			await fs.writeFile(output, pdfBytes)
 
 			return output
-
-			// const inStream = fs.createReadStream(input)
-			// const outStream = fs.createWriteStream(process.cwd() + "/" + output)
-
-			// outStream.on("finish", () => {
-
-			// 	const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
-
-			// 	const pdfReader = createReader(input)
-
-			// 	const pageCount = pdfReader.getPagesCount()
-
-			// 	const token = signature_params.file_token
-
-			// 	for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-
-			// 		const pageModifier = new PDFPageModifier(pdfWriter, pageIndex)
-
-			// 		if (signature_params.page === pageIndex + 1) {
-
-			// 			pageModifier
-			// 				.startContext()
-			// 				.getContext()
-			// 				.drawImage(signature_params.eje_x,
-			// 					signature_params.eje_y * signature_params.mm,
-			// 					signature_params.path_signature,
-			// 					{
-			// 						transformation:
-			// 						{
-			// 							width: 140,
-			// 							height: 140 / 2,
-			// 							proportional: true,
-			// 							fit: "always",
-			// 						}
-			// 					})
-			// 		}
-
-			// 		pageModifier
-			// 			.startContext()
-			// 			.getContext()
-			// 			.writeText(signature_params.company_name,
-			// 				25,
-			// 				15,
-			// 				{
-			// 					font: pdfWriter.getFontForFile(
-			// 						process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
-			// 					),
-			// 					size: 8,
-			// 					colorspace: "gray",
-			// 					color: 0x747474,
-			// 				})
-			// 			.writeText(token,
-			// 				25 + 42,
-			// 				15,
-			// 				{
-			// 					font: pdfWriter.getFontForFile(
-			// 						process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-			// 					),
-			// 					size: 7,
-			// 					colorspace: "gray",
-			// 					color: 0x7c7c7c,
-			// 				})
-
-			// 		pageModifier
-			// 			.endContext()
-			// 			.writePage()
-			// 	}
-
-			// 	pdfWriter.end()
-
-			// 	// outStream.close()
-			// 	// inStream.close()
-			// })
-
-			// inStream.pipe(outStream)
-
-			// return await new Promise<string>((resolve, reject) => {
-			// 	outStream.on("close", () => {
-			// 		console.log(`PDF guardado en ${output}`)
-			// 		// outStream.close()
-			// 		// inStream.close()
-			// 		resolve(output)
-			// 	})
-
-			// 	outStream.on("error", (err) => {
-			// 		console.error("Error al escribir el archivo:", err)
-			// 		reject(err)
-			// 	})
-			// })
 
 		} catch (error) {
 			this.loggerRepository.error(error)
@@ -256,460 +142,400 @@ export class PDFEditor {
 			const input = process.cwd() + "/" + path_file
 			const output = "tmp/output_PDF/" + signature_params.file_token + "_summary.pdf"
 
-			const inStream = fs.createReadStream(input)
-			const outStream = fs.createWriteStream(process.cwd() + "/" + output)
-
 			const token = signature_params.file_token
 
-			outStream.on("finish", () => {
+			const existingPpfBytes = await fs.readFile(input)
 
-				const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
+			const pdfDoc = await PDFDocument.load(existingPpfBytes)
 
-				const pageWidth = 595
-				const pageHeight = 842
-				console.log("pageWidth:", pageWidth)
-				console.log("pageHeight:", pageHeight)
+			// const pages = pdfDoc.getPages()
 
-				//Quiero agregar una página al final del documento
+			// const { width, height } = pages[pages.length-1].getSize()
 
-				const nuevoPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
+			const [width, height] = [595.28, 841.89]
+			
+			const newPage = pdfDoc.addPage([width, height])
 
-				// Header
-				pdfWriter
-					.startPageContentContext(nuevoPage)
-					.drawImage(
-						25,
-						pageHeight - (15 * 4),
-						"assets/images/png/logoFirmEasy.png",
-						{
-							transformation:
-							{
-								width: 110,
-								height: 110 / 2,
-								proportional: true,
-								fit: "always",
-							}
-						})
-					.writeText("Huella de Auditoría",
-						25 + 110 + 25,
-						pageHeight - (15 * 4) + 8,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
-							),
-							size: 13,
-							colorspace: "gray",
-							color: 0x000000,
-						})
-					.writeText(signature_params.time_zone,
-						pageWidth - 25 - 195,
-						pageHeight - (15 * 4) + 15,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x000000,
-						})
-					.writeText(signature_params.lastUpdate,
-						pageWidth - 25 - 195,
-						pageHeight - (15 * 4) + 5,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x000000,
-						})
-					.drawRectangle(
-						25,
-						pageHeight - (15 * 4) - 15,
-						pageWidth - 25 - 25,
-						1,
-						{
-							colorspace: "gray",
-							color: 0x31293F,
-							type: "fill",
+			const helvicaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+			const helvicaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
-						})
+			//Imagenes
+			const logo_path = await fs.readFile("assets/images/png/logoFirmEasy.png")
+			const logo = await pdfDoc.embedPng(logo_path)
 
-				// File & QRCode
+			logo.scale(0.5)
 
-				pdfWriter
-					.startPageContentContext(nuevoPage)
-					.writeText(signature_params.original_filename.slice(0, 65),
-						25 + 10,
-						pageHeight - (15 * 4) - 65,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
-							),
-							size: 11,
-							colorspace: "gray",
-							color: 0x000000,
-						})
-					.writeText("ID del Documento ",
-						25 + 10,
-						pageHeight - (15 * 4) - 80,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x505050,
-						})
-					.writeText(token,
-						25 + 10 + 70,
-						pageHeight - (15 * 4) - 80,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x505050,
-						})
-					.drawImage(
-						pageWidth - 25 - 85,
-						pageHeight - (15 * 4) - 30 - 75,
-						signature_params.qr_filename,
-						{
-							transformation:
-							{
-								width: 75,
-								height: 75,
-								proportional: true,
-								fit: "always",
-							}
-						})
-					.drawRectangle(
-						25,
-						pageHeight - (15 * 4) - 120,
-						pageWidth - 25 - 25,
-						1,
-						{
-							colorspace: "gray",
-							color: 0x31293F,
-							type: "fill",
+			const qr_code = await fs.readFile(signature_params.qr_filename)
+			const qr = await pdfDoc.embedPng(qr_code)
 
-						})
+			qr.scale(0.5)
 
-				/* Detalle del firmante */
-				pdfWriter
-					.startPageContentContext(nuevoPage)
-					.writeText("Identificación del Firmante",
-						25,
-						pageHeight - (15 * 4) - 145,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
-							),
-							size: 12,
-							colorspace: "gray",
-							color: 0x000000,
-						})
-					.drawImage(
-						25,
-						pageHeight - (15 * 4) - 190,
-						"assets/images/png/viñeta.png",
-						{
-							transformation:
-							{
-								width: 25,
-								height: 25,
-								proportional: true,
-								fit: "always",
-							}
-						})
-					.writeText(signature_params.signer_name,
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 175,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Medium.ttf"
-							),
-							size: 10,
-							colorspace: "gray",
-							color: 0x262626,
-						})
-					.writeText("Firmante",
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 185,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							// colorspace: "gray",
-							color: 0x0b9f7f,
-						})
-					.writeText("Dispositivo: " + signature_params.signer_device,
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 220,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							// colorspace: "gray",
-							color: 0x262626,
-						})
-					.writeText("IP: " + signature_params.signer_IP,
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 232,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x262626,
-						})
-					.writeText("Fecha y Hora: " + signature_params.signer_date,
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 244,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x262626,
-						})
-					.writeText("Correo: " + signature_params.signer_email,
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 256,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x262626,
-						})
-					.writeText("Celular: " + signature_params.signer_phone,
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 268,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x262626,
-						})
-					.writeText("Firmante ID: " + signature_params.signer_ID,
-						25 + 25 + 10,
-						pageHeight - (15 * 4) - 280,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x262626,
-						})
-					.drawRectangle(
-						pageWidth - 25 - 195,
-						pageHeight - (15 * 4) - 235,
-						140,
-						70,
-						{
-							color: 0x0e035c,
-						})
-					.drawImage(
-						pageWidth - 25 - 195,
-						pageHeight - (15 * 4) - 235 + 10,
-						signature_params.path_signature,
-						{
-							transformation:
-							{
-								width: 140,
-								height: 140 / 2,
-								proportional: true,
-								fit: "always",
-							}
-						})
-					.writeText("Firma Ológrafa",
-						pageWidth - 25 - 155,
-						pageHeight - (15 * 4) - 248,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Medium.ttf"
-							),
-							size: 8,
-							// colorspace: "gray",
-							color: 0x031215,
-						})
-					.drawRectangle(
-						25,
-						pageHeight - (15 * 4) - 300,
-						pageWidth - 25 - 25,
-						1,
-						{
-							colorspace: "gray",
-							color: 0x31293F,
-							type: "fill",
+			const viñeta_path = await fs.readFile("assets/images/png/viñeta.png")
+			const viñeta = await pdfDoc.embedPng(viñeta_path)
 
-						})
+			viñeta.scale(0.5)
 
-				let height = pageHeight - (15 * 4) - 320
+			const signature_path = await fs.readFile(signature_params.path_signature)
+			const signature = await pdfDoc.embedPng(signature_path)
 
-				/*Agregar Fotos si es que tiene la opcion de biometrico*/
-				if (signature_params.biometrico) {
-					pdfWriter
-						.startPageContentContext(nuevoPage)
-						.writeText("Fotos del Firmante",
-							25,
-							height,
-							{
-								font: pdfWriter.getFontForFile(
-									process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
-								),
-								size: 12,
-								colorspace: "gray",
-								color: 0x000000,
-							})
+			signature.scale(0.5)
 
-					if (signature_params.path_dni_anverso) {
-						pdfWriter
-							.startPageContentContext(nuevoPage)
-							.drawImage(
-								25 + 25 + 10,
-								height - 95,
-								signature_params.path_dni_anverso,
-								{
-									transformation:
-									{
-										width: 140,
-										height: 140 / 2,
-										proportional: true,
-										fit: "always",
-									}
-								})
-					}
+			let dni_anverso = undefined
+			let dni_reverso = undefined
+			let imagen_firmante = undefined
 
-					if (signature_params.path_dni_reverso) {
-						pdfWriter
-							.startPageContentContext(nuevoPage)
-							.drawImage(
-								25 + 25 + 10 + 140 + 40,
-								height - 95,
-								signature_params.path_dni_reverso,
-								{
-									transformation:
-									{
-										width: 140,
-										height: 140 / 2,
-										proportional: true,
-										fit: "always",
-									}
-								})
-					}
+			if (signature_params.biometrico) {
 
-					if (signature_params.path_imagen_firmante) {
-						pdfWriter
-							.startPageContentContext(nuevoPage)
-							.drawImage(
-								25 + 25 + 10 + 140 + 40 + 140 + 40,
-								height - 95,
-								signature_params.path_imagen_firmante,
-								{
-									transformation:
-									{
-										width: 140,
-										height: 140 / 2,
-										proportional: true,
-										fit: "always",
-									}
-								})
-					}
+				if (signature_params.path_dni_anverso) {
+					const dni_anverso_path = await fs.readFile(signature_params.path_dni_anverso)
+					dni_anverso = await pdfDoc.embedJpg(dni_anverso_path)
 
-					height = height - 95 - 10 - 10
-
-					pdfWriter
-						.startPageContentContext(nuevoPage)
-						.drawRectangle(
-							25,
-							height,
-							pageWidth - 25 - 25,
-							1,
-							{
-								colorspace: "gray",
-								color: 0x31293F,
-								type: "fill",
-
-							})
-
-					height = height - 15
+					dni_anverso.scale(0.5)
 				}
 
-				/*Add Link QR*/
-				pdfWriter
-					.startPageContentContext(nuevoPage)
-					.writeText("Validación Documental: " + signature_params.qr_link,
-						25,
-						height,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Medium.ttf"
-							),
-							size: 8,
-							// colorspace: "gray",
-							color: 0x333333,
-						})
+				if (signature_params.path_dni_reverso) {
+					const dni_reverso_path = await fs.readFile(signature_params.path_dni_reverso)
+					dni_reverso = await pdfDoc.embedJpg(dni_reverso_path)
 
-				pdfWriter
-					.startPageContentContext(nuevoPage)
-					.writeText(signature_params.company_name,
-						25,
-						15,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-SemiBold.ttf"
-							),
-							size: 8,
-							colorspace: "gray",
-							color: 0x747474,
-						})
-					.writeText(token,
-						25 + 42,
-						15,
-						{
-							font: pdfWriter.getFontForFile(
-								process.cwd() + "/assets/fonts/NotoSans-Regular.ttf"
-							),
-							size: 7,
-							colorspace: "gray",
-							color: 0x7c7c7c,
-						})
+					dni_reverso.scale(0.5)
+				}
 
-				pdfWriter.writePage(nuevoPage)
-				console.log("pageCount:", (pageHeight - 15))
-				pdfWriter.end()
+				if (signature_params.path_imagen_firmante) {
+					const imagen_firmante_path = await fs.readFile(signature_params.path_imagen_firmante)
+					imagen_firmante = await pdfDoc.embedJpg(imagen_firmante_path)
 
-				// outStream.close()
-				// inStream.close()
+					imagen_firmante.scale(0.5)
+				}
+			}
+
+			let newheight = height - 55
+
+			newPage.drawImage(logo, {
+				x: 25,
+				y: newheight,
+				width: 110,
+				height: 110 / 3.7,
 			})
 
-			inStream.pipe(outStream)
+			newheight = newheight + 6.5
 
-			return await new Promise<string>((resolve, reject) => {
-				outStream.on("close", () => {
-					console.log(`PDF guardado en ${output}`)
-					// outStream.finish()
-					// inStream.close()
-					resolve(output)
-				})
-
-				outStream.on("error", (err) => {
-					console.error("Error al escribir el archivo:", err)
-					reject(err)
-				})
+			newPage.drawText("Huella de Auditoría", {
+				x: 25 + 110 + 25,
+				y: newheight,
+				size: 13,
+				font: helvicaBoldFont,
+				color: rgb(0, 0, 0),
 			})
+
+			newheight = newheight + 8
+
+			newPage.drawText(signature_params.time_zone, {
+				x: width - 25 - 195,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0, 0, 0),
+			})
+
+			newheight = newheight - 9
+
+			newPage.drawText(signature_params.lastUpdate, {
+				x: width - 25 - 195,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0, 0, 0),
+			})
+
+			newheight = newheight - 20
+			//====================================================================================================
+			newPage.drawRectangle({
+				x: 25,
+				y: newheight,
+				width: width - 25 - 25,
+				height: 1,
+				color: rgb(0.247, 0.247, 0.247),
+			})
+			//====================================================================================================
+
+			newheight = newheight - 50
+
+			newPage.drawText(signature_params.original_filename.slice(0, 65), {
+				x: 25 + 10, 
+				y: newheight,
+				size: 11,
+				font: helvicaBoldFont,
+				color: rgb(0, 0, 0),
+			})
+
+			newheight = newheight - 13
+
+			newPage.drawText("ID del Documento ", {
+				x: 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.314, 0.286, 0.247),
+			})
+
+			newPage.drawText(token, {
+				x: 25 + 10 + 70,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.314, 0.286, 0.247),
+			})
+
+			newheight = newheight - 27
+
+			newPage.drawImage(qr, {
+				x: width - 25 - 85,
+				y: newheight,
+				width: 75,
+				height: 75,
+				opacity: 0.9,
+			})
+			
+			newheight = newheight - 15
+			//====================================================================================================
+			newPage.drawRectangle({
+				x: 25,
+				y: newheight,
+				width: width - 25 - 25,
+				height: 1,
+				color: rgb(0.247, 0.247, 0.247),
+			})
+			//====================================================================================================
+			
+			newheight = newheight - 25
+
+			newPage.drawText("Identificación del Firmante", {
+				x: 25,
+				y: newheight,
+				size: 12,
+				font: helvicaBoldFont,
+				color: rgb(0, 0, 0),
+			})
+
+			newheight = newheight - 50
+
+			newPage.drawImage(viñeta, {
+				x: 25,
+				y: newheight,
+				width: 25,
+				height: 25,
+			})
+
+			newheight = newheight + 15
+
+			newPage.drawText(signature_params.signer_name, {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 10,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight - 10
+			
+			newPage.drawText("Firmante", {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.043, 0.624, 0.498),
+			})
+
+			newheight = newheight - 30
+
+			newPage.drawText("Dispositivo: " + signature_params.signer_device, {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight - 12
+
+			newPage.drawText("IP: " + signature_params.signer_IP, {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight - 12
+
+			newPage.drawText("Fecha y Hora: " + signature_params.signer_date, {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight - 12
+
+			newPage.drawText("Correo: " + signature_params.signer_email, {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight - 12
+
+			newPage.drawText("Celular: " + signature_params.signer_phone, {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight - 12
+
+			newPage.drawText("Firmante ID: " + signature_params.signer_ID, {
+				x: 25 + 25 + 10,
+				y: newheight,
+				size: 8,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight + 40
+
+			newPage.drawRectangle({
+				x: width - 25 - 195,
+				y: newheight,
+				width: 140,
+				height: 70,
+				// color: rgb(0.247, 0.247, 0.247),
+				borderColor: rgb(0.055, 0.012, 0.361),
+				borderWidth: 1,
+			})
+
+			newPage.drawImage(signature, {
+				x: width - 25 - 180,
+				y: newheight,
+				width: 110,
+				height: 110 / 2,
+			})	
+
+			newheight = newheight - 15
+
+			newPage.drawText("Firma Ológrafa", {
+				x: width - 25 - 155,
+				y: newheight,
+				size: 8,
+				font: helvicaBoldFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			newheight = newheight - 45
+			//====================================================================================================
+			newPage.drawRectangle({
+				x: 25,
+				y: newheight,
+				width: width - 25 - 25,
+				height: 1,
+				color: rgb(0.247, 0.247, 0.247),
+			})
+			//====================================================================================================
+
+			if (signature_params.biometrico) {
+				newheight = newheight - 25
+
+				newPage.drawText("Fotos del Firmante", {
+					x: 25,
+					y: newheight,
+					size: 12,
+					font: helvicaBoldFont,
+					color: rgb(0, 0, 0),
+				})
+
+				newheight = newheight - 170
+
+				if (dni_anverso) {
+
+					newPage.drawImage(dni_anverso, {
+						x: 25 + 25 + 10,
+						y: newheight,
+						width: 150,
+						height: 150,
+					})
+				}
+
+				if (dni_reverso) {
+
+					newPage.drawImage(dni_reverso, {
+						x: 25 + 25 + 10 + 150 + 10,
+						y: newheight,
+						width: 150,
+						height: 150,
+					})
+				}
+
+				if (imagen_firmante) {
+
+					newPage.drawImage(imagen_firmante, {
+						x: 25 + 25 + 10 + 150 + 10 + 150 + 10,
+						y: newheight,
+						width: 150,
+						height: 150,
+					})
+				}
+
+				newheight = newheight - 20
+				//====================================================================================================
+				newPage.drawRectangle({
+					x: 25,
+					y: newheight,
+					width: width - 25 - 25,
+					height: 1,
+					color: rgb(0.247, 0.247, 0.247),
+				})
+				//====================================================================================================
+			}
+			
+			newheight = newheight - 20
+
+			newPage.drawText("Validación Documental: " + signature_params.qr_link, {
+				x: 25,
+				y: newheight,
+				size: 9,
+				font: helvicaFont,
+				color: rgb(0.149, 0.149, 0.149),
+			})
+
+			//Pie de Pagina
+
+			newheight = 15
+			
+			newPage.drawText(signature_params.company_name, {
+				x: 25,
+				y: newheight,
+				size: 8,
+				font: helvicaBoldFont,
+				color: rgb(0.458, 0.455, 0.455),
+			})
+			
+			newPage.drawText(token, {
+				x: 25 + 42,
+				y: newheight,
+				size: 7,
+				font: helvicaFont,
+				color: rgb(0.533, 0.522, 0.561),
+			})
+
+			const pdfBytes = await pdfDoc.save()
+
+			await fs.writeFile(output, pdfBytes)
+
+			return output
 
 		} catch (error) {
 			this.loggerRepository.error(error)
@@ -734,138 +560,41 @@ export class PDFEditor {
 			const input = process.cwd() + "/" + path_file
 			const output = "tmp/output_PDF/" + this.uuid + "_qr.pdf"
 
-			const pdfWriter = createWriter(output)
+			const existingPpfBytes = await fs.readFile(input)
 
-			const pdfReader = createReader(input)
+			const pdfDoc = await PDFDocument.load(existingPpfBytes)
+			const helvicaFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
-			const pageCount = pdfReader.getPagesCount()
+			const pages = pdfDoc.getPages()
 
-			for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-				
-				const page = pdfReader.parsePage(pageIndex)
-				const pageWidth = page.getMediaBox()[2]
-				const pageHeight = page.getMediaBox()[3]
+			const qr_code_path = await fs.readFile(qr_path)
 
-				const newPage = pdfWriter.createPage(0, 0, pageWidth, pageHeight)
+			const qrcode = await pdfDoc.embedPng(qr_code_path)
 
-				const contentContext = pdfWriter
-					.startPageContentContext(newPage)
-					.q()
-				
-				pdfWriter.mergePDFPagesToPage(
-					newPage,
-					input,
-					{ type: eRangeTypeSpecific, specificRanges: [[pageIndex, pageIndex]] }
-				)
+			const firstpage = pages[0]
 
-				if (pageIndex === 0) {
-					contentContext
-						.Q()
-						.q()
-						.drawImage(
-							1,
-							pageHeight - 5 - 48,
-							qr_path,
-							{
-								transformation:
-								{
-									width: 45,
-									height: 45,
-									proportional: true,
-									fit: "always",
-								}
-							})
-						.writeText("Code: " + qr_code,
-							1,
-							pageHeight - 5,
-							{
-								font: pdfWriter.getFontForFile(
-									process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
-								),
-								size: 6,
-								colorspace: "gray",
-								color: 0x000000,
-							})
-						.Q()
+			const { height } = firstpage.getSize()
 
-					pdfWriter
-						.writePage(newPage)
-				} else {
-					pdfWriter
-						.writePage(newPage)
-				}
-			}
-			
-			pdfWriter
-				.end()
+			firstpage.drawText("Code: " + qr_code, {
+				x: 1,
+				y: height - 6,
+				size: 6,
+				font: helvicaFont,
+				color: rgb(0, 0, 0),
+			})
+
+			firstpage.drawImage(qrcode, {
+				x: 1,
+				y: height - 5 - 48,
+				width: 45,
+				height: 45,
+			})
+
+			const pdfBytes = await pdfDoc.save()
+
+			await fs.writeFile(output, pdfBytes)
 
 			return output
-
-			// const inStream = fs.createReadStream(input)
-			// const outStream = fs.createWriteStream(process.cwd() + "/" + output)
-
-			// outStream.on("finish", () => {
-
-			// 	const pdfWriter = createWriterToModify(process.cwd() + "/" + output)
-
-			// 	const pdfReader = createReader(input)
-
-			// 	const page = pdfReader.parsePage(0)
-			// 	// const pageWidth = page.getMediaBox()[2]
-			// 	const pageHeight = page.getMediaBox()[3]
-
-			// 	const pageModifier = new PDFPageModifier(pdfWriter, 0)
-
-			// 	pageModifier
-			// 		.startContext()
-			// 		.getContext()
-			// 		.writeText("Code: " + qr_code,
-			// 			1,
-			// 			pageHeight - 5,
-			// 			{
-			// 				font: pdfWriter.getFontForFile(
-			// 					process.cwd() + "/assets/fonts/NotoSans-Bold.ttf"
-			// 				),
-			// 				size: 6,
-			// 				colorspace: "gray",
-			// 				color: 0x000000,
-			// 			})
-			// 		.drawImage(
-			// 			1,
-			// 			pageHeight - 5 - 48,
-			// 			qr_path,
-			// 			{
-			// 				transformation:
-			// 				{
-			// 					width: 45,
-			// 					height: 45,
-			// 					proportional: true,
-			// 					fit: "always",
-			// 				}
-			// 			})
-
-			// 	pageModifier
-			// 		.endContext()
-			// 		.writePage()
-
-			// 	pdfWriter.end()
-			// })
-
-			// inStream.pipe(outStream)
-
-			// return await new Promise<string>((resolve, reject) => {
-			// 	outStream.on("close", () => {
-			// 		console.log(`PDF guardado en ${output}`)
-			// 		// outStream.close()
-			// 		// inStream.close()
-			// 		resolve(output)
-			// 	})
-
-			// 	outStream.on("error", (err) => {
-			// 		console.error("Error al escribir el archivo:", err)
-			// 		reject(err)
-			// 	})
-			// })
 
 		} catch (error) {
 			this.loggerRepository.error(error)

@@ -39,8 +39,7 @@ export const s3Repository = new S3Repository({
 })
 
 export const pdfEditor = new PDFEditor({
-	loggerRepository,
-	eventEmitir
+	loggerRepository
 })
 
 export const filerepository = new FileRepository({

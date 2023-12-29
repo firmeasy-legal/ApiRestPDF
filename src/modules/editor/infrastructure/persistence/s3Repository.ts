@@ -114,6 +114,49 @@ export class S3Repository {
 		}
 	}
 
+	async getTempPathFromURI_JPG(uri: string): Promise<string | undefined> {
+
+		const uuid = crypto.randomUUID()
+
+		const command = new GetObjectCommand({
+			Bucket: process.env.AWS_BUCKET,
+			Key: uri,
+		})
+
+		try {
+			const response = await this.s3Client.send(command)
+
+			if (response.Body === undefined) {
+				return undefined
+			}
+
+			const readstream = response.Body as Readable
+
+			const filePath = `tmp/input_JPG/${uuid}.jpg`
+			const fileWriteStream = fs.createWriteStream(filePath)
+
+			readstream.pipe(fileWriteStream)
+
+			return await new Promise<string>((resolve, reject) => {
+				fileWriteStream.on("finish", () => {
+					console.log(`JPG guardado en ${filePath}`)
+					fileWriteStream.close()
+					resolve(filePath)
+				})
+
+				fileWriteStream.on("error", (err) => {
+					console.error("Error al escribir la imagen:", err)
+					reject(err)
+				})
+			})
+
+		} catch (error) {
+			this.loggerRepository.error(error)
+			console.error("Error:", error)
+			return undefined
+		}
+	}
+
 	async addFileToS3(filePath: string, file_path: string): Promise<{ fileKey: string, new_filename: string, file_path: string } | undefined> {
 		
 		const fileContent = fs.readFileSync(process.cwd() + "/" + filePath)
@@ -136,12 +179,17 @@ export class S3Repository {
 		}
 
 		try {
+			
 			const command = new PutObjectCommand(params)
 			const response = await this.s3Client.send(command)
 
 			if (response.$metadata.httpStatusCode !== 200) {
 				new Error("No se pudo guardar el archivo")
 			}
+
+			console.log("====================================================================================================")
+			console.log("==================================== Uploaded file to S3 ===========================================")	
+			console.log("====================================================================================================")
 			
 			return {
 				fileKey,
