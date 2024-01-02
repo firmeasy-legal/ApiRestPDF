@@ -74,6 +74,8 @@ export class PDFEditor {
 			const signature_path = await fs.readFile(signature_params.path_signature)
 			const signature = await pdfDoc.embedPng(signature_path)
 
+			signature.scale(0.5)
+
 			console.log("Eje X: " + signature_params.eje_x)
 			console.log("Eje Y: " + signature_params.eje_y)
 			console.log("MM: " + signature_params.mm)
@@ -86,15 +88,20 @@ export class PDFEditor {
 				// const pixelsToPointsRatio = 1.33
 
 				const xInPoints = signature_params.eje_x
-				const yInPoints = height - signature_params.eje_y
+				const yInPoints = (height - signature_params.eje_y) - 45
 
 				if (signature_params.page === index + 1) {
 					console.log("Entre a la pagina: " + index)
+					console.log("Width: " + width)
+					console.log("Height: " + height)
+					console.log("X: " + xInPoints)
+					console.log("Y: " + yInPoints)
+					
 					page.drawImage(signature, {
 						x: xInPoints,
 						y: yInPoints,
-						width: 140,
-						height: 140 / 2,
+						width: 160,
+						height: 45,
 					})
 				}
 
