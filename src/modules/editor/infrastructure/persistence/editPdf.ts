@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
+import { PDFDocument, PDFImage, StandardFonts, rgb } from "pdf-lib"
 
 import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
 import crypto from "node:crypto"
@@ -165,9 +165,9 @@ export class PDFEditor {
 
 			signature.scale(0.5)
 
-			let dni_anverso = undefined
-			let dni_reverso = undefined
-			let imagen_firmante = undefined
+			let dni_anverso: PDFImage | undefined = undefined
+			let dni_reverso: PDFImage | undefined = undefined
+			let imagen_firmante: PDFImage | undefined = undefined
 
 			if (signature_params.biometrico) {
 
@@ -224,11 +224,60 @@ export class PDFEditor {
 						borderWidth: 1,
 					})
 
+					page.drawText("Firma Electrónica", {
+						x: xInPoints + 2,
+						y: yInPoints + 36,
+						size: 7,
+						font: helvicaBoldFont,
+						color: rgb(0.149, 0.149, 0.149),
+					})
+
+					page.drawText(signature_params.signer_name, {
+						x: xInPoints + 2,
+						y: yInPoints + 28,
+						size: 6,
+						font: helvicaFont,
+						color: rgb(0.149, 0.149, 0.149),
+					})
+
+					page.drawText(signature_params.signer_email, {
+						x: xInPoints + 2,
+						y: yInPoints + 20,
+						size: 6,
+						font: helvicaFont,
+						color: rgb(0.149, 0.149, 0.149),
+					})
+
+					page.drawText(signature_params.signer_ID, {
+						x: xInPoints + 2,
+						y: yInPoints + 12,
+						size: 6,
+						font: helvicaFont,
+						color: rgb(0.149, 0.149, 0.149),
+					})
+
+					page.drawText(signature_params.signer_date, {
+						x: xInPoints + 2,
+						y: yInPoints + 4,
+						size: 6,
+						font: helvicaFont,
+						color: rgb(0.149, 0.149, 0.149),
+					})
+
+					if (imagen_firmante) {
+						page.drawImage(imagen_firmante, {
+							x: xInPoints + 160 - 45 + 2.5,
+							y: yInPoints + 2.5,
+							width: 40,
+							height: 40,
+						})
+					}
+
 					page.drawImage(signature, {
-						x: xInPoints,
+						x: xInPoints + 160 - 45 - 30,
 						y: yInPoints,
-						width: 160,
-						height: 45,
+						width: 30,
+						height: 20,
 					})
 
 					console.log("====================================================================================================")

@@ -169,36 +169,36 @@ apiRouter.post("/eSignature2", async (req: Request, res: Response) => {
 			})
 		}
 
-		// const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
+		const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
 
-		// if (!pdf_summary_added) {
-		// 	return res.status(401).json({
-		// 		message: "Hubo un error al procesar el PDF firmado"
-		// 	})
-		// }
+		if (!pdf_summary_added) {
+			return res.status(401).json({
+				message: "Hubo un error al procesar el PDF firmado"
+			})
+		}
 
-		// const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
+		const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
 
-		// if (result === undefined) {
-		// 	res.status(500).json({
-		// 		error: "Ocurrió un error al guardar el archivo en S3",
-		// 		message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
-		// 	})
-		// } else {
-		// 	const { fileKey, new_filename, file_path } = result
+		if (result === undefined) {
+			res.status(500).json({
+				error: "Ocurrió un error al guardar el archivo en S3",
+				message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
+			})
+		} else {
+			const { fileKey, new_filename, file_path } = result
 
-		// 	res.json({
-		// 		completePath: fileKey,
-		// 		new_filename,
-		// 		file_path
-		// 	})
-		// }
+			res.json({
+				completePath: fileKey,
+				new_filename,
+				file_path
+			})
+		}
 
 		filerepository.deleteFile(path_file)
 		filerepository.deleteFile(signature_params.path_signature)
 		filerepository.deleteFile(signature_params.qr_filename)
-		// filerepository.deleteFile(pdf_signed)
-		// filerepository.deleteFile(pdf_summary_added)
+		filerepository.deleteFile(pdf_signed)
+		filerepository.deleteFile(pdf_summary_added)
 
 		if (signature_params.biometrico) {
 			filerepository.deleteFile(signature_params.path_dni_anverso)
@@ -206,9 +206,9 @@ apiRouter.post("/eSignature2", async (req: Request, res: Response) => {
 			filerepository.deleteFile(signature_params.path_imagen_firmante)
 		}
 
-		res.json({
-			message: "PDF firmado correctamente",
-		})
+		// res.json({
+		// 	message: "PDF firmado correctamente",
+		// })
 
 	} catch (error) {
 		loggerRepository.error(error)
