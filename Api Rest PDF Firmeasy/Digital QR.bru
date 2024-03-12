@@ -1,0 +1,20 @@
+meta {
+  name: Digital QR
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{api}}/addDigitalQR
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "origin_filename": "28368d33-0f71-4dc0-b930-4510eb62d807/9d4f88f3-6b29-40f4-966b-7dcaa8d9e1c8/1710177635-ExCxdtIWmj.pdf",
+      "qr_filename": "6eddc881-9c6c-457d-ac60-8e87ccb9f285/ec2c089d-c2b0-4d59-b702-6817a8cc15b6/qr/va6tX2a1Ki0.png",
+      "qr_code": "HGDNFU",
+      "file_path": "28368d33-0f71-4dc0-b930-4510eb62d807/9d4f88f3-6b29-40f4-966b-7dcaa8d9e1c8"
+  }
+}

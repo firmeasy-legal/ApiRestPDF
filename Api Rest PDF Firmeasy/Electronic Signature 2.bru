@@ -1,0 +1,43 @@
+meta {
+  name: Electronic Signature 2
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{api}}/eSignature2
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "origin_filename": "28368d33-0f71-4dc0-b930-4510eb62d807/9d4f88f3-6b29-40f4-966b-7dcaa8d9e1c8/1710177635-ExCxdtIWmj.pdf",
+      "file_path": "28368d33-0f71-4dc0-b930-4510eb62d807\/9d4f88f3-6b29-40f4-966b-7dcaa8d9e1c8",
+      "signature_params": {
+          "original_filename": "CONTRATO_GIRASOL (5).PDF",
+          "signature_filename": "bcc5c46e-d1bb-49d0-baef-54be464a9640/firmas/diIDU9p1.png",
+          "qr_filename": "28368d33-0f71-4dc0-b930-4510eb62d807/9d4f88f3-6b29-40f4-966b-7dcaa8d9e1c8/qr/edKGZzhXF40.png",
+          "mm": 0.644583,
+          "eje_x": 247,
+          "eje_y": 486,
+          "page": 1,
+          "company_name": "Girasol",
+          "file_token": "ab1d3ca5-3122-4ee3-b67e-f9cbf22dc6c3",
+          "time_zone": "Fechas y Horas en UTC-05:00 (America\/Lima)",
+          "lastUpdate": "March 11, 2024, 12:36",
+          "signer_name": "Diego Carlos",
+          "signer_email": "testeosac616@gmail.com",
+          "signer_ID": "xkTRVSbF7oe0Tw5",
+          "signer_phone": "954561480",
+          "signer_device": "Móvil",
+          "signer_IP": "190.43.75.109",
+          "signer_date": "11/03/2024, 12:36:13",
+          "qr_link": "https://app.firmeasy.legal/link-validez/electronica/616b8b51-fbed-49f4-937d-19ad57075666",
+          "biometrico": true,
+          "imagen_dni_anverso": "ff9ad008-8500-462d-be2b-190913f7336e/xkTRVSbF7oe0Tw5_dni_anverso.jpg",
+          "imagen_dni_reverso": "ff9ad008-8500-462d-be2b-190913f7336e/xkTRVSbF7oe0Tw5_dni_reverso.jpg",
+          "imagen_firmante": "ff9ad008-8500-462d-be2b-190913f7336e/xkTRVSbF7oe0Tw5_imagen_firmante.jpg"
+      }
+  }
+}

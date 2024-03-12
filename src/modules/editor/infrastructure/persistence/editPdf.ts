@@ -1,8 +1,8 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 
-import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository";
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
+import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
+import crypto from "node:crypto"
+import fs from "node:fs/promises"
 
 type Params = {
 	loggerRepository: LoggerRepository;
@@ -96,7 +96,7 @@ export class PDFEditor {
 					console.log("Height: " + height)
 					console.log("X: " + xInPoints)
 					console.log("Y: " + yInPoints)
-					
+
 					page.drawImage(signature, {
 						x: xInPoints,
 						y: yInPoints,
@@ -112,6 +112,136 @@ export class PDFEditor {
 					font: helvicaBoldFont,
 					color: rgb(0.458, 0.455, 0.455),
 				})
+				page.drawText(token, {
+					x: 25 + 42,
+					y: 15,
+					size: 7,
+					font: helvicaFont,
+					color: rgb(0.533, 0.522, 0.561),
+				})
+			})
+
+			const pdfBytes = await pdfDoc.save()
+
+			await fs.writeFile(output, pdfBytes)
+
+			return output
+
+		} catch (error) {
+			this.loggerRepository.error(error)
+			console.error("Error:", error)
+			return undefined
+		}
+
+	}
+
+	async addInitialSignature2(
+		path_file: string,
+		signature_params: SignatureParams
+	) {
+
+		try {
+
+			console.log("====================================================================================================")
+			console.log("================================= Starding add initial signature 2 in PDF ==========================")
+			console.log("====================================================================================================")
+
+			const input = process.cwd() + "/" + path_file
+			const output = "tmp/output_PDF/" + signature_params.file_token + "_signed.pdf"
+
+			const existingPpfBytes = await fs.readFile(input)
+
+			const pdfDoc = await PDFDocument.load(existingPpfBytes)
+			const helvicaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+			const helvicaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+
+			const pages = pdfDoc.getPages()
+
+			const token = signature_params.file_token
+
+			//Imagenes
+			const signature_path = await fs.readFile(signature_params.path_signature)
+			const signature = await pdfDoc.embedPng(signature_path)
+
+			signature.scale(0.5)
+
+			let dni_anverso = undefined
+			let dni_reverso = undefined
+			let imagen_firmante = undefined
+
+			if (signature_params.biometrico) {
+
+				if (signature_params.path_dni_anverso) {
+					const dni_anverso_path = await fs.readFile(signature_params.path_dni_anverso)
+					dni_anverso = await pdfDoc.embedJpg(dni_anverso_path)
+
+					dni_anverso.scale(0.5)
+				}
+
+				if (signature_params.path_dni_reverso) {
+					const dni_reverso_path = await fs.readFile(signature_params.path_dni_reverso)
+					dni_reverso = await pdfDoc.embedJpg(dni_reverso_path)
+
+					dni_reverso.scale(0.5)
+				}
+
+				if (signature_params.path_imagen_firmante) {
+					const imagen_firmante_path = await fs.readFile(signature_params.path_imagen_firmante)
+					imagen_firmante = await pdfDoc.embedJpg(imagen_firmante_path)
+
+					imagen_firmante.scale(0.5)
+				}
+
+			}
+
+			console.log("Eje X: " + signature_params.eje_x)
+			console.log("Eje Y: " + signature_params.eje_y)
+			console.log("MM: " + signature_params.mm)
+			console.log("Page: " + signature_params.page)
+			console.log("Path: " + signature_params.path_signature)
+
+			pages.forEach((page, index) => {
+				const { width, height } = page.getSize()
+
+				// const pixelsToPointsRatio = 1.33
+
+				const xInPoints = signature_params.eje_x
+				const yInPoints = (height - signature_params.eje_y) - 45
+
+				if (signature_params.page === index + 1) {
+					console.log("Entre a la pagina: " + index)
+					console.log("Width: " + width)
+					console.log("Height: " + height)
+					console.log("X: " + xInPoints)
+					console.log("Y: " + yInPoints)
+
+					page.drawRectangle({
+						x: xInPoints,
+						y: yInPoints,
+						width: 160,
+						height: 45,
+						borderColor: rgb(0.055, 0.012, 0.361),
+						borderWidth: 1,
+					})
+
+					page.drawImage(signature, {
+						x: xInPoints,
+						y: yInPoints,
+						width: 160,
+						height: 45,
+					})
+
+					console.log("====================================================================================================")
+				}
+
+				page.drawText(signature_params.company_name, {
+					x: 25,
+					y: 15,
+					size: 8,
+					font: helvicaBoldFont,
+					color: rgb(0.458, 0.455, 0.455),
+				})
+
 				page.drawText(token, {
 					x: 25 + 42,
 					y: 15,
@@ -160,7 +290,7 @@ export class PDFEditor {
 			// const { width, height } = pages[pages.length-1].getSize()
 
 			const [width, height] = [595.28, 841.89]
-			
+
 			const newPage = pdfDoc.addPage([width, height])
 
 			const helvicaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -268,7 +398,7 @@ export class PDFEditor {
 			newheight = newheight - 50
 
 			newPage.drawText(signature_params.original_filename.slice(0, 65), {
-				x: 25 + 10, 
+				x: 25 + 10,
 				y: newheight,
 				size: 11,
 				font: helvicaBoldFont,
@@ -302,7 +432,7 @@ export class PDFEditor {
 				height: 75,
 				opacity: 0.9,
 			})
-			
+
 			newheight = newheight - 15
 			//====================================================================================================
 			newPage.drawRectangle({
@@ -313,7 +443,7 @@ export class PDFEditor {
 				color: rgb(0.247, 0.247, 0.247),
 			})
 			//====================================================================================================
-			
+
 			newheight = newheight - 25
 
 			newPage.drawText("Identificación del Firmante", {
@@ -344,7 +474,7 @@ export class PDFEditor {
 			})
 
 			newheight = newheight - 10
-			
+
 			newPage.drawText("Firmante", {
 				x: 25 + 25 + 10,
 				y: newheight,
@@ -430,7 +560,7 @@ export class PDFEditor {
 				y: newheight,
 				width: 110,
 				height: 110 / 2,
-			})	
+			})
 
 			newheight = newheight - 15
 
@@ -507,7 +637,7 @@ export class PDFEditor {
 				})
 				//====================================================================================================
 			}
-			
+
 			newheight = newheight - 20
 
 			newPage.drawText("Validación Documental: " + signature_params.qr_link, {
@@ -521,7 +651,7 @@ export class PDFEditor {
 			//Pie de Pagina
 
 			newheight = 15
-			
+
 			newPage.drawText(signature_params.company_name, {
 				x: 25,
 				y: newheight,
@@ -529,7 +659,7 @@ export class PDFEditor {
 				font: helvicaBoldFont,
 				color: rgb(0.458, 0.455, 0.455),
 			})
-			
+
 			newPage.drawText(token, {
 				x: 25 + 42,
 				y: newheight,
