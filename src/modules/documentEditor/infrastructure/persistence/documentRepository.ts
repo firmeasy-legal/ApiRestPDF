@@ -50,7 +50,7 @@ export class DocumentRepository {
 		try {
 
 			console.log("====================================================================================================")
-			console.log("=================================== Starding add initial signature in PDF ==========================")
+			console.log("================================= Starding add new initial signature in PDF ========================")
 			console.log("====================================================================================================")
 
 			const input = process.cwd() + "/" + path_file
