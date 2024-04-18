@@ -3,18 +3,19 @@ import { rootDir, serverPort } from "./constants"
 import { EventEmitter } from "node:events"
 import { ExpressServer } from "./http/ExpressServer"
 import { FileRepository } from "@/editor/infrastructure/persistence/fileRepository"
-import { PDFEditor } from "@/editor/infrastructure/persistence/editPdf"
+import { InitialSignatory } from "@/documentEditor/infrastructure/persistence/initialSignatory"
 import { OnScreenSignatureRepository } from "@/OnScreenSignature/infrastructure/persistence/OnScreenSignatureRepository"
-import { DocumentRepository } from "@/documentEditor/infrastructure/persistence/documentRepository"
+import { OnScreenSignatureRouter } from "@/OnScreenSignature/infrastructure/http"
+import { PDFEditor } from "@/editor/infrastructure/persistence/editPdf"
 import { PrismaClient } from "./persistence"
 import { PrismaUserRepository } from "@/user/infrastructure/persistence/PrismaUserRepository"
 import { Router } from "express"
 import { S3Client } from "@aws-sdk/client-s3"
 import { S3Repository } from "@/editor/infrastructure/persistence/s3Repository"
+import { SummaryRepository } from "@/documentEditor/infrastructure/persistence/SummaryRepository"
 import { WinstonLoggerRepository } from "./logs/WinstonLoggerRepository"
-import { pdfEditorRouter } from "@/editor/infrastructure/http"
-import { OnScreenSignatureRouter } from "@/OnScreenSignature/infrastructure/http"
 import { documentEditorRouter } from "@/documentEditor/infrastructure/http"
+import { pdfEditorRouter } from "@/editor/infrastructure/http"
 import { userRouter } from "@/user/infrastructure/http"
 
 export const eventEmitir = new EventEmitter()
@@ -46,7 +47,11 @@ export const on_screen_signature_repository = new OnScreenSignatureRepository({
 	loggerRepository
 })
 
-export const documentRepository = new DocumentRepository({
+export const summaryRepository = new SummaryRepository({
+	loggerRepository
+})
+
+export const initialSignatory = new InitialSignatory({
 	loggerRepository
 })
 

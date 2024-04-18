@@ -1,0 +1,44 @@
+meta {
+  name: add Electronic Signatory
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{api}}/addElectronicSignatory
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "origin_filename": "28368d33-0f71-4dc0-b930-4510eb62d807/b7654a1b-015e-4e77-9956-6537b17f48ff/1713368377686-5kjufyu1e8.pdf",
+      "file_path": "28368d33-0f71-4dc0-b930-4510eb62d807/b7654a1b-015e-4e77-9956-6537b17f48ff",
+      "signature_params": {
+          "original_filename": "ARCHIVO NUEVO ELECTRONICO SIN S3.pdf",
+          "qr_filename": "28368d33-0f71-4dc0-b930-4510eb62d807/b7654a1b-015e-4e77-9956-6537b17f48ff/qr/7aHlp8c8C00.png",
+          "eje_x": 305,
+          "eje_y": 788,
+          "page": 1,
+          "company_name": "FirmEasy",
+          "file_token": "fa8ae959-72b9-4047-a481-15134a86eb67",
+          "time_zone": "Fechas y Horas en UTC-05:00 (America\/Lima)",
+          "lastUpdate": "April 17, 2024, 11:43",
+          "signer_name": "Diego Carlos",
+          "signer_email": "testeosac616@gmail.com",
+          "signer_ID": "zdq0V5Q8LJedeFg",
+          "signer_phone": "954561480",
+          "signer_device": "Escritorio",
+          "signer_IP": "190.43.252.227",
+          "signer_date": "17/04/2024, 11:43:30",
+          "qr_link": "http://localhost/link-validez/electronica/fa8ae959-72b9-4047-a481-15134a86eb67",
+          "biometrico": true,
+          "imagen_firma": "3db9c710-e4e4-47b8-977e-95e948461e7c/zdq0V5Q8LJedeFg_firma.png",
+          "selfie": true,
+          "imagen_selfie": "3db9c710-e4e4-47b8-977e-95e948461e7c/zdq0V5Q8LJedeFg_selfie_firmante.jpg",
+          "doc_identidad": false,
+          "imagen_front_document": null,
+          "imagen_behind_document": null
+      }
+  }
+}
