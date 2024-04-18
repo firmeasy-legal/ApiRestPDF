@@ -49,7 +49,7 @@ export class InitialSignatory {
 			const signature_path = await fs.readFile(signature_params.path_imagen_firma.path)
 			const signature = await pdfDoc.embedPng(signature_path)
 
-			signature.scale(1)
+			signature.scale(0.5)
 
 			console.log("Eje X: " + signature_params.eje_x)
 			console.log("Eje Y: " + signature_params.eje_y)
@@ -59,7 +59,7 @@ export class InitialSignatory {
 			pages.forEach((page, index) => {
 				const { width, height } = page.getSize()
 
-				const xInPoints = signature_params.eje_x
+				const xInPoints = signature_params.eje_x + 10
 				const yInPoints = (height - signature_params.eje_y) - 45
 
 				if (signature_params.page === index + 1) {
@@ -72,8 +72,10 @@ export class InitialSignatory {
 					page.drawImage(signature, {
 						x: xInPoints,
 						y: yInPoints,
-						width: 160,
-						height: 45,
+						width: 110,
+						height: 110 / 2,
+						// width: 160,
+						// height: 45,
 					})
 				}
 			})

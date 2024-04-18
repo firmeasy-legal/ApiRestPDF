@@ -4,15 +4,14 @@ import { EventEmitter } from "node:events"
 import { ExpressServer } from "./http/ExpressServer"
 import { FileRepository } from "@/editor/infrastructure/persistence/fileRepository"
 import { InitialSignatory } from "@/documentEditor/infrastructure/persistence/initialSignatory"
-import { OnScreenSignatureRepository } from "@/OnScreenSignature/infrastructure/persistence/OnScreenSignatureRepository"
-import { OnScreenSignatureRouter } from "@/OnScreenSignature/infrastructure/http"
 import { PDFEditor } from "@/editor/infrastructure/persistence/editPdf"
 import { PrismaClient } from "./persistence"
 import { PrismaUserRepository } from "@/user/infrastructure/persistence/PrismaUserRepository"
 import { Router } from "express"
 import { S3Client } from "@aws-sdk/client-s3"
 import { S3Repository } from "@/editor/infrastructure/persistence/s3Repository"
-import { SummaryRepository } from "@/documentEditor/infrastructure/persistence/SummaryRepository"
+import { SummaryRepository } from "@/documentEditor/infrastructure/persistence/summaryRepository"
+import { UtilsRepository } from "@/documentEditor/infrastructure/persistence/utilsRepository"
 import { WinstonLoggerRepository } from "./logs/WinstonLoggerRepository"
 import { documentEditorRouter } from "@/documentEditor/infrastructure/http"
 import { pdfEditorRouter } from "@/editor/infrastructure/http"
@@ -43,15 +42,15 @@ export const s3Repository = new S3Repository({
 	loggerRepository
 })
 
-export const on_screen_signature_repository = new OnScreenSignatureRepository({
-	loggerRepository
-})
-
 export const summaryRepository = new SummaryRepository({
 	loggerRepository
 })
 
 export const initialSignatory = new InitialSignatory({
+	loggerRepository
+})
+
+export const utilsRepository = new UtilsRepository({
 	loggerRepository
 })
 
@@ -72,7 +71,6 @@ const apiRouter = Router()
 
 apiRouter.use(userRouter.api)
 apiRouter.use(pdfEditorRouter.api)
-apiRouter.use(OnScreenSignatureRouter.api)
 apiRouter.use(documentEditorRouter.api)
 
 export const expressServer = new ExpressServer({
