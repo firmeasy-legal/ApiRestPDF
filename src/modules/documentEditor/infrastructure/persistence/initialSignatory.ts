@@ -12,6 +12,7 @@ type SignatureParams = {
 	eje_y: number;
 	page: number;
 	file_token: string;
+	
 	path_imagen_firma: {
 		success: true;
 		path: string;

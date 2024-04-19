@@ -361,7 +361,7 @@ export class SummaryRepository {
 
 				newheight = newheight - 15
 
-				newPage.drawText("Firma Ológrafa", {
+				newPage.drawText("Firma Biométrica", {
 					x: width - 25 - 155,
 					y: newheight,
 					size: 8,

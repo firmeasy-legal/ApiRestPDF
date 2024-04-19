@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events"
 import { ExpressServer } from "./http/ExpressServer"
 import { FileRepository } from "@/editor/infrastructure/persistence/fileRepository"
 import { InitialSignatory } from "@/documentEditor/infrastructure/persistence/initialSignatory"
+import { InitialSignatory2 } from "@/documentEditor/infrastructure/persistence/initialSignatory2"
 import { PDFEditor } from "@/editor/infrastructure/persistence/editPdf"
 import { PrismaClient } from "./persistence"
 import { PrismaUserRepository } from "@/user/infrastructure/persistence/PrismaUserRepository"
@@ -47,6 +48,10 @@ export const summaryRepository = new SummaryRepository({
 })
 
 export const initialSignatory = new InitialSignatory({
+	loggerRepository
+})
+
+export const initialSignatory2 = new InitialSignatory2({
 	loggerRepository
 })
 
