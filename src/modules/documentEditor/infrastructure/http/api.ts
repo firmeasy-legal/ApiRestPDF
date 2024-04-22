@@ -40,6 +40,13 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 				} as const
 			})
 
+		if (!file_object.success) {
+			return res.status(400).json({
+				success: false,
+				message: file_object.message
+			})
+		}
+
 		if (signature_params.biometrico) {
 			signature_params.path_imagen_firma = await s3Repository.getTempPathFromURI_PNG(`public/${signature_params.imagen_firma}`)
 				.then((path) => {
@@ -83,6 +90,13 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 						message: "Hubo un error al obtener la imagen de la selfie"
 					}
 				})
+			
+			if (!signature_params.path_imagen_selfie.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_imagen_selfie.message
+				})
+			}
 		}
 
 		if (signature_params.doc_identidad) {
@@ -103,6 +117,13 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 					}
 				})
 
+			if (!signature_params.path_imagen_front_document.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_imagen_front_document.message
+				})
+			}
+
 			signature_params.path_imagen_behind_document = await s3Repository.getTempPathFromURI_JPG(`public/${signature_params.imagen_behind_document}`)
 				.then((path) => {
 					return {
@@ -119,6 +140,13 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 						message: "Hubo un error al obtener la imagen del documento de identidad (reverso)"
 					}
 				})
+
+			if (!signature_params.path_imagen_behind_document.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_imagen_behind_document.message
+				})
+			}
 		}
 
 		signature_params.path_qr = await s3Repository.getTempPathFromURI_PNG(`public/${normalizesQRFilename}`)
@@ -240,6 +268,13 @@ apiRouter.post("/addElectronicSignatory2", async (req: Request, res: Response) =
 				} as const
 			})
 
+		if (!file_object.success) {
+			return res.status(400).json({
+				success: false,
+				message: file_object.message
+			})
+		}
+
 		if (signature_params.selfie) {
 			signature_params.path_imagen_selfie = await s3Repository.getTempPathFromURI_JPG(`public/${signature_params.imagen_selfie}`)
 				.then((path) => {
@@ -257,6 +292,13 @@ apiRouter.post("/addElectronicSignatory2", async (req: Request, res: Response) =
 						message: "Hubo un error al obtener la imagen de la selfie"
 					}
 				})
+
+			if (!signature_params.path_imagen_selfie.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_imagen_selfie.message
+				})
+			}
 		}
 
 		if (signature_params.doc_identidad) {
@@ -277,6 +319,13 @@ apiRouter.post("/addElectronicSignatory2", async (req: Request, res: Response) =
 					}
 				})
 
+			if (!signature_params.path_imagen_front_document.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_imagen_front_document.message
+				})
+			}
+
 			signature_params.path_imagen_behind_document = await s3Repository.getTempPathFromURI_JPG(`public/${signature_params.imagen_behind_document}`)
 				.then((path) => {
 					return {
@@ -293,6 +342,13 @@ apiRouter.post("/addElectronicSignatory2", async (req: Request, res: Response) =
 						message: "Hubo un error al obtener la imagen del documento de identidad (reverso)"
 					}
 				})
+
+			if (!signature_params.path_imagen_behind_document.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_imagen_behind_document.message
+				})
+			}
 		}
 
 		signature_params.path_qr = await s3Repository.getTempPathFromURI_PNG(`public/${normalizesQRFilename}`)

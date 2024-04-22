@@ -10,5 +10,6 @@ bin/*.txt
 dist/*
 tmp/**/*.pdf
 tmp/**/*.png
+tmp/**/*.jpg
 
 docker/database/data/*
