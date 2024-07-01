@@ -64,15 +64,16 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 			})
 		}
 
-		const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
+		// const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
 
-		if (!pdf_summary_added) {
-			return res.status(401).json({
-				message: "Hubo un error al procesar el PDF firmado"
-			})
-		}
+		// if (!pdf_summary_added) {
+		// 	return res.status(401).json({
+		// 		message: "Hubo un error al procesar el PDF firmado"
+		// 	})
+		// }
 
-		const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
+		// const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
+		const result = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
 
 		if (result === undefined) {
 			res.status(500).json({
@@ -93,7 +94,7 @@ apiRouter.post("/eSignature", async (req: Request, res: Response) => {
 		filerepository.deleteFile(signature_params.path_signature)
 		filerepository.deleteFile(signature_params.qr_filename)
 		filerepository.deleteFile(pdf_signed)
-		filerepository.deleteFile(pdf_summary_added)
+		// filerepository.deleteFile(pdf_summary_added)
 
 		if (signature_params.biometrico) {
 			filerepository.deleteFile(signature_params.path_dni_anverso)
