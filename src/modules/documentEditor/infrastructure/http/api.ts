@@ -169,6 +169,12 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 				file_path
 			})
 
+			// res.json({
+			// 	status: "success",
+			// 	message: "Firma biometrica realizada con exito",
+			// 	pdf_signed
+			// })
+
 			// Flujo terminado, se eliminan los archivos temporales
 
 			filerepository.deleteFile(file_object.path)
