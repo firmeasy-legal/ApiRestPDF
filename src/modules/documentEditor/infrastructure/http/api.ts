@@ -149,6 +149,80 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 			}
 		}
 
+		if (signature_params.video_firma) {
+			signature_params.path_video_capture1 = await s3Repository.getTempPathFromURI_PNG(`public/${signature_params.video_firma_video_capture1}`)
+				.then((path) => {
+					return {
+						success: true,
+						path,
+						message: undefined
+					}
+				})
+				.catch((error) => {
+					loggerRepository.error(error)
+					return {
+						success: false,
+						path: undefined,
+						message: "Hubo un error al obtener la captura 1 del video"
+					}
+				})
+
+			if (!signature_params.path_video_capture1.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_video_capture1.message
+				})
+			}
+
+			signature_params.path_video_capture2 = await s3Repository.getTempPathFromURI_PNG(`public/${signature_params.video_firma_video_capture2}`)
+				.then((path) => {
+					return {
+						success: true,
+						path,
+						message: undefined
+					}
+				})
+				.catch((error) => {
+					loggerRepository.error(error)
+					return {
+						success: false,
+						path: undefined,
+						message: "Hubo un error al obtener la captura 2 del video"
+					}
+				})
+
+			if (!signature_params.path_video_capture2.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_video_capture2.message
+				})
+			}
+			
+			signature_params.path_video_capture3 = await s3Repository.getTempPathFromURI_PNG(`public/${signature_params.video_firma_video_capture3}`)
+				.then((path) => {
+					return {
+						success: true,
+						path,
+						message: undefined
+					}
+				})
+				.catch((error) => {
+					loggerRepository.error(error)
+					return {
+						success: false,
+						path: undefined,
+						message: "Hubo un error al obtener la captura 3 del video"
+					}
+				})
+
+			if (!signature_params.path_video_capture3.success) {
+				return res.status(400).json({
+					success: false,
+					message: signature_params.path_video_capture3.message
+				})
+			}
+		}
+
 		signature_params.path_qr = await s3Repository.getTempPathFromURI_PNG(`public/${normalizesQRFilename}`)
 
 		if (signature_params.biometrico && signature_params.path_imagen_firma.success && file_object.success) {
@@ -159,21 +233,21 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 
 			const pdf_signed = await summaryRepository.addSummarySignature(pdf_footer_added, signature_params)
 
-			// const response = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
+			const response = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
 
-			// const { fileKey, new_filename, file_path } = response
-
-			// res.json({
-			// 	completePath: fileKey,
-			// 	new_filename,
-			// 	file_path
-			// })
+			const { fileKey, new_filename, file_path } = response
 
 			res.json({
-				status: "success",
-				message: "Firma biometrica realizada con exito",
-				pdf_signed
+				completePath: fileKey,
+				new_filename,
+				file_path
 			})
+
+			// res.json({
+			// 	status: "success",
+			// 	message: "Firma biometrica realizada con exito",
+			// 	pdf_signed
+			// })
 
 			// Flujo terminado, se eliminan los archivos temporales
 
@@ -194,7 +268,7 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 
 			filerepository.deleteFile(pdf_footer_added)
 
-			// filerepository.deleteFile(pdf_signed)
+			filerepository.deleteFile(pdf_signed)
 
 		} if (!signature_params.biometrico && file_object.success) {
 

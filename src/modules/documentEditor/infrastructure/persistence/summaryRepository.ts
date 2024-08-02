@@ -32,6 +32,8 @@ type SignatureParams = {
 	video_firma_sha256?: string;
 	video_firma_size?: string;
 
+	// Imagenes de la firma
+	
 	path_imagen_firma?: {
 		success: true;
 		path: string;
@@ -39,12 +41,16 @@ type SignatureParams = {
 
 	firma_imagen?: PDFImage;
 
+	// Imagen de la selfie
+
 	path_imagen_selfie?: {
 		success: true;
 		path: string;
 	}
 
 	selfie_imagen?: PDFImage;
+
+	// Imagen del documento de identidad
 
 	path_imagen_front_document?: {
 		success: true;
@@ -59,6 +65,29 @@ type SignatureParams = {
 	}
 
 	behind_document_image?: PDFImage;
+
+	// Imagenes del video
+
+	path_video_capture1?: {
+		success: true;
+		path: string;
+	}
+
+	video_image_capture1?: PDFImage;
+
+	path_video_capture2?: {
+		success: true;
+		path: string;
+	}
+
+	video_image_capture2?: PDFImage;
+	
+	path_video_capture3?: {
+		success: true;
+		path: string;
+	}
+
+	video_image_capture3?: PDFImage;
 };
 
 export class SummaryRepository {
@@ -142,6 +171,30 @@ export class SummaryRepository {
 				signature_params.behind_document_image = await pdfDoc.embedJpg(imagen_behind_document_path)
 
 				signature_params.behind_document_image.scale(0.5)
+			}
+
+			if (signature_params.path_video_capture1) {
+				const imagen_video_capture1_path = await fs.readFile(signature_params.path_video_capture1.path)
+
+				signature_params.video_image_capture1 = await pdfDoc.embedPng(imagen_video_capture1_path)
+
+				signature_params.video_image_capture1.scale(0.5)
+			}
+
+			if (signature_params.path_video_capture2) {
+				const imagen_video_capture2_path = await fs.readFile(signature_params.path_video_capture2.path)
+
+				signature_params.video_image_capture2 = await pdfDoc.embedPng(imagen_video_capture2_path)
+
+				signature_params.video_image_capture2.scale(0.5)
+			}
+
+			if (signature_params.path_video_capture3) {
+				const imagen_video_capture3_path = await fs.readFile(signature_params.path_video_capture3.path)
+
+				signature_params.video_image_capture3 = await pdfDoc.embedPng(imagen_video_capture3_path)
+
+				signature_params.video_image_capture3.scale(0.5)
 			}
 
 			let newheight = height - 55
@@ -471,13 +524,13 @@ export class SummaryRepository {
 					color: rgb(0, 0, 0),
 				})
 
-				newheight = newheight - 140
+				newheight = newheight - 135
 
 				let newwidth = 25 + 25 + 10
 
-				if (signature_params.selfie_imagen) {
+				if (signature_params.video_image_capture1) {
 
-					newPage.drawImage(signature_params.selfie_imagen, {
+					newPage.drawImage(signature_params.video_image_capture1, {
 						x: newwidth,
 						y: newheight,
 						width: 120,
@@ -487,9 +540,21 @@ export class SummaryRepository {
 
 				newwidth = newwidth + 130 + 40
 
-				if (signature_params.selfie_imagen) {
+				if (signature_params.video_image_capture2) {
 
-					newPage.drawImage(signature_params.selfie_imagen, {
+					newPage.drawImage(signature_params.video_image_capture2, {
+						x: newwidth,
+						y: newheight,
+						width: 120,
+						height: 120,
+					})
+				}
+
+				newwidth = newwidth + 130 + 40
+
+				if (signature_params.video_image_capture3) {
+
+					newPage.drawImage(signature_params.video_image_capture3, {
 						x: newwidth,
 						y: newheight,
 						width: 120,
