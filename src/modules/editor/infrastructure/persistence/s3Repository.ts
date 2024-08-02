@@ -209,4 +209,51 @@ export class S3Repository {
 
 	}
 
+	async getSha256FromURI(uri: string): Promise<string|undefined> {
+		
+		try {
+
+			console.log("=======================================================================================================")
+			console.log("==================================== Starding to get SHA256 ===========================================")
+			console.log("=======================================================================================================")
+
+			const command = new GetObjectCommand({
+				Bucket: process.env.AWS_BUCKET,
+				Key: uri,
+			})
+			
+			const response = await this.s3Client.send(command)
+
+			const readstream = response.Body as Readable
+			
+			const hash = crypto.createHash("sha256")
+
+			readstream.on("data", (chunk) => {
+				hash.update(chunk)
+			})
+
+			return await new Promise<string>((resolve, reject) => {
+				readstream.on("end", () => {
+					const sha256 = hash.digest("hex")
+					resolve(sha256)
+				})
+
+				readstream.on("error", (err) => {
+					console.error("Error al leer el archivo:", err)
+					reject(err)
+				})
+			})
+
+		} catch (error) {
+			this.loggerRepository.error(error)
+			console.error("Error_getSha256FromURI:", error)
+
+			if (error instanceof NoSuchKey) {
+				throw new Error(error.message)
+			}
+
+			throw new Error("Error desconocido en getSha256FromURI")
+		}
+	}
+
 }

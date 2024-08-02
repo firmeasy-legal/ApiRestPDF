@@ -27,6 +27,10 @@ type SignatureParams = {
 	biometrico?: boolean;
 	selfie?: boolean;
 	doc_identidad?: boolean;
+	video_firma?: boolean;
+	video_firma_date?: string;
+	video_firma_sha256?: string;
+	video_firma_size?: string;
 
 	path_imagen_firma?: {
 		success: true;
@@ -353,7 +357,7 @@ export class SummaryRepository {
 
 
 				newPage.drawImage(signature_params.firma_imagen, {
-					x: width - 25 - 180,
+					x: width - 25 - 170,
 					y: newheight + 10,
 					width: 110,
 					height: 110 / 2,
@@ -361,8 +365,8 @@ export class SummaryRepository {
 
 				newheight = newheight - 15
 
-				newPage.drawText("Firma Biométrica", {
-					x: width - 25 - 155,
+				newPage.drawText("Firma Holográfica", {
+					x: width - 25 - 160,
 					y: newheight,
 					size: 8,
 					font: helvicaBoldFont,
@@ -404,7 +408,7 @@ export class SummaryRepository {
 					color: rgb(0, 0, 0),
 				})
 
-				newheight = newheight - 170
+				newheight = newheight - 140
 
 				let newwidth = 25 + 25 + 10
 
@@ -413,8 +417,8 @@ export class SummaryRepository {
 					newPage.drawImage(signature_params.front_document_image, {
 						x: newwidth,
 						y: newheight,
-						width: 150,
-						height: 150,
+						width: 120,
+						height: 120,
 					})
 
 					newwidth = newwidth + 150 + 10
@@ -425,8 +429,8 @@ export class SummaryRepository {
 					newPage.drawImage(signature_params.behind_document_image, {
 						x: newwidth,
 						y: newheight,
-						width: 150,
-						height: 150,
+						width: 120,
+						height: 120,
 					})
 
 					newwidth = newwidth + 150 + 10
@@ -437,10 +441,91 @@ export class SummaryRepository {
 					newPage.drawImage(signature_params.selfie_imagen, {
 						x: newwidth,
 						y: newheight,
-						width: 150,
-						height: 150,
+						width: 120,
+						height: 120,
 					})
 				}
+
+				newheight = newheight - 20
+				//====================================================================================================
+				newPage.drawRectangle({
+					x: 25,
+					y: newheight,
+					width: width - 25 - 25,
+					height: 1,
+					color: rgb(0.247, 0.247, 0.247),
+				})
+				//====================================================================================================
+			}
+
+			//==============================================Video Firma===========================================
+			
+			if (signature_params.video_firma) {
+				newheight = newheight - 25
+
+				newPage.drawText("Resumen del Video del " + signature_params.signer_name, {
+					x: 25,
+					y: newheight,
+					size: 12,
+					font: helvicaBoldFont,
+					color: rgb(0, 0, 0),
+				})
+
+				newheight = newheight - 140
+
+				let newwidth = 25 + 25 + 10
+
+				if (signature_params.selfie_imagen) {
+
+					newPage.drawImage(signature_params.selfie_imagen, {
+						x: newwidth,
+						y: newheight,
+						width: 120,
+						height: 120,
+					})
+				}
+
+				newwidth = newwidth + 130 + 40
+
+				if (signature_params.selfie_imagen) {
+
+					newPage.drawImage(signature_params.selfie_imagen, {
+						x: newwidth,
+						y: newheight,
+						width: 120,
+						height: 120,
+					})
+				}
+				
+				newheight = newheight - 20
+
+				newPage.drawText("Fecha y Hora del Video: " + signature_params.video_firma_date, {
+					x: 25 + 10,
+					y: newheight,
+					size: 8,
+					font: helvicaBoldFont,
+					color: rgb(0.149, 0.149, 0.149),
+				})
+
+				newheight = newheight - 15
+
+				newPage.drawText("Tamaño del Video en Bytes: " + signature_params.video_firma_size, {
+					x: 25 + 10,
+					y: newheight,
+					size: 8,
+					font: helvicaBoldFont,
+					color: rgb(0.149, 0.149, 0.149),
+				})
+
+				newheight = newheight - 15
+
+				newPage.drawText("SHA256 del Video: " + signature_params.video_firma_sha256, {
+					x: 25 + 10,
+					y: newheight,
+					size: 8,
+					font: helvicaBoldFont,
+					color: rgb(0.149, 0.149, 0.149),
+				})
 
 				newheight = newheight - 20
 				//====================================================================================================

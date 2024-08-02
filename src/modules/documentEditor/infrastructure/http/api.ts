@@ -159,21 +159,21 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 
 			const pdf_signed = await summaryRepository.addSummarySignature(pdf_footer_added, signature_params)
 
-			const response = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
+			// const response = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
 
-			const { fileKey, new_filename, file_path } = response
-
-			res.json({
-				completePath: fileKey,
-				new_filename,
-				file_path
-			})
+			// const { fileKey, new_filename, file_path } = response
 
 			// res.json({
-			// 	status: "success",
-			// 	message: "Firma biometrica realizada con exito",
-			// 	pdf_signed
+			// 	completePath: fileKey,
+			// 	new_filename,
+			// 	file_path
 			// })
+
+			res.json({
+				status: "success",
+				message: "Firma biometrica realizada con exito",
+				pdf_signed
+			})
 
 			// Flujo terminado, se eliminan los archivos temporales
 
@@ -194,7 +194,7 @@ apiRouter.post("/addElectronicSignatory", async (req: Request, res: Response) =>
 
 			filerepository.deleteFile(pdf_footer_added)
 
-			filerepository.deleteFile(pdf_signed)
+			// filerepository.deleteFile(pdf_signed)
 
 		} if (!signature_params.biometrico && file_object.success) {
 
@@ -437,6 +437,33 @@ apiRouter.post("/addElectronicSignatory2", async (req: Request, res: Response) =
 			sucess: false,
 			message: "Error al procesar el PDF",
 			error: error
+		})
+	}
+})
+
+apiRouter.get("/getSha256", async (req: Request, res: Response): Promise<void> => {
+	const { key } = req.query
+
+	try {
+		if (!key) {
+			throw new Error("No se ha enviado la clave")
+		}
+
+		const Sha256 = await s3Repository.getSha256FromURI(key as string)
+
+		res.json({
+			Sha256
+		})
+
+		console.log("=======================================================================================================")
+		console.log("============================================= SHA256 Getted ===========================================")
+		console.log("=======================================================================================================")
+	} catch (error) {
+		loggerRepository.error(error)
+		console.error("Error_getETag:", error)
+		res.status(400).json({
+			success: false,
+			message: error
 		})
 	}
 })
