@@ -523,22 +523,20 @@ apiRouter.get("/getSha256", async (req: Request, res: Response): Promise<void> =
 			throw new Error("No se ha enviado la clave")
 		}
 
-		const Sha256 = await s3Repository.getSha256FromURI(key as string)
-
+		const Sha256 : string = await s3Repository.getSha256FromURI(key as string)
+		
 		res.json({
 			Sha256
 		})
-
-		console.log("=======================================================================================================")
-		console.log("============================================= SHA256 Getted ===========================================")
-		console.log("=======================================================================================================")
-	} catch (error) {
+	} catch (error: any) {
 		loggerRepository.error(error)
-		console.error("Error_getETag:", error)
-		res.status(400).json({
-			success: false,
-			message: error
-		})
+		if (error.message === "NoSuchKey") {
+			res.status(404).json({ message: "El archivo especificado no existe en S3" });
+		} else if (error.message === "No se ha enviado la clave") {
+			res.status(400).json({ message: "No se ha enviado la clave de busqueda de S3" });
+		} else {
+			res.status(500).json({ message: "Error desconocido" });
+		}
 	}
 })
 

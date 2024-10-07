@@ -1,6 +1,5 @@
 import { apiRouter } from "./api"
 
-export const userRouter = {
+export const converterRouter = {
 	api: apiRouter,
 }
-
