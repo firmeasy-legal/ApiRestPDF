@@ -1,296 +1,430 @@
-import { Request, Response, Router } from "express"
-import { pdfEditor, s3Repository } from "@/shared/infrastructure/container"
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { Request, Response, Router } from 'express';
+import { pdfEditor, s3Repository } from '@/shared/infrastructure/container';
 
-import { filerepository } from "@/shared/infrastructure/container"
-import { loggerRepository } from "@/shared/infrastructure/container"
+import { filerepository } from '@/shared/infrastructure/container';
+import { loggerRepository } from '@/shared/infrastructure/container';
 
-const apiRouter = Router()
+const apiRouter = Router();
 
-apiRouter.post("/eSignature", async (req: Request, res: Response) => {
+apiRouter.post('/eSignature', async (req: Request, res: Response) => {
+  const { origin_filename, file_path, signature_params } = req.body;
 
-	const {
-		origin_filename,
-		file_path,
-		signature_params
-	} = req.body
+  try {
+    if (signature_params.biometrico) {
+      const normalized_dni_anverso =
+        signature_params.imagen_dni_anverso.startsWith('/')
+          ? signature_params.imagen_dni_anverso.slice(1)
+          : signature_params.imagen_dni_anverso;
+      const normalized_dni_reverso =
+        signature_params.imagen_dni_reverso.startsWith('/')
+          ? signature_params.imagen_dni_reverso.slice(1)
+          : signature_params.imagen_dni_reverso;
+      const normalized_imagen_firmante =
+        signature_params.imagen_firmante.startsWith('/')
+          ? signature_params.imagen_firmante.slice(1)
+          : signature_params.imagen_firmante;
 
-	try {
+      signature_params.path_dni_anverso =
+        await s3Repository.getTempPathFromURI_JPG(
+          `public/${normalized_dni_anverso}`
+        );
+      signature_params.path_dni_reverso =
+        await s3Repository.getTempPathFromURI_JPG(
+          `public/${normalized_dni_reverso}`
+        );
+      signature_params.path_imagen_firmante =
+        await s3Repository.getTempPathFromURI_JPG(
+          `public/${normalized_imagen_firmante}`
+        );
+    }
 
-		if (signature_params.biometrico) {
-			const normalized_dni_anverso = signature_params.imagen_dni_anverso.startsWith("/") ? signature_params.imagen_dni_anverso.slice(1) : signature_params.imagen_dni_anverso
-			const normalized_dni_reverso = signature_params.imagen_dni_reverso.startsWith("/") ? signature_params.imagen_dni_reverso.slice(1) : signature_params.imagen_dni_reverso
-			const normalized_imagen_firmante = signature_params.imagen_firmante.startsWith("/") ? signature_params.imagen_firmante.slice(1) : signature_params.imagen_firmante
+    const normalizedFilePath = file_path.startsWith('/')
+      ? file_path.slice(1)
+      : file_path;
 
-			signature_params.path_dni_anverso = await s3Repository.getTempPathFromURI_JPG(`public/${normalized_dni_anverso}`)
-			signature_params.path_dni_reverso = await s3Repository.getTempPathFromURI_JPG(`public/${normalized_dni_reverso}`)
-			signature_params.path_imagen_firmante = await s3Repository.getTempPathFromURI_JPG(`public/${normalized_imagen_firmante}`)
-		}
+    const normalizedFilename = origin_filename.startsWith('/')
+      ? origin_filename.slice(1)
+      : origin_filename;
 
-		const normalizedFilePath = file_path.startsWith("/") ? file_path.slice(1) : file_path
+    const normalizesQRFilename = signature_params.qr_filename.startsWith('/')
+      ? signature_params.qr_filename.slice(1)
+      : signature_params.qr_filename;
 
-		const normalizedFilename = origin_filename.startsWith("/") ? origin_filename.slice(1) : origin_filename
+    const path_file = await s3Repository.getTempPathFromURI_PDF(
+      `public/${normalizedFilename}`
+    );
 
-		const normalizesQRFilename = signature_params.qr_filename.startsWith("/") ? signature_params.qr_filename.slice(1) : signature_params.qr_filename
+    if (!path_file) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener el PDF',
+      });
+    }
 
-		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${normalizedFilename}`)
+    signature_params.path_signature = await s3Repository.getTempPathFromURI_PNG(
+      `public/${signature_params.signature_filename}`
+    );
 
-		if (!path_file) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener el PDF"
-			})
-		}
+    if (!signature_params.path_signature) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener la firma',
+      });
+    }
 
-		signature_params.path_signature = await s3Repository.getTempPathFromURI_PNG(`public/${signature_params.signature_filename}`)
+    signature_params.qr_filename = await s3Repository.getTempPathFromURI_PNG(
+      `public/${normalizesQRFilename}`
+    );
 
-		if (!signature_params.path_signature) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener la firma"
-			})
-		}
+    if (!signature_params.qr_filename) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener el QR',
+      });
+    }
 
-		signature_params.qr_filename = await s3Repository.getTempPathFromURI_PNG(`public/${normalizesQRFilename}`)
+    const pdf_signed = await pdfEditor.addInitialSignature(
+      path_file,
+      signature_params
+    );
 
-		if (!signature_params.qr_filename) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener el QR"
-			})
-		}
+    if (!pdf_signed) {
+      return res.status(401).json({
+        message: 'Hubo un error al procesar el PDF no firmado',
+      });
+    }
 
-		const pdf_signed = await pdfEditor.addInitialSignature(path_file, signature_params)
+    // const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
 
-		if (!pdf_signed) {
-			return res.status(401).json({
-				message: "Hubo un error al procesar el PDF no firmado"
-			})
-		}
+    // if (!pdf_summary_added) {
+    // 	return res.status(401).json({
+    // 		message: "Hubo un error al procesar el PDF firmado"
+    // 	})
+    // }
 
-		// const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
+    // const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
+    const result = await s3Repository.addFileToS3(
+      pdf_signed,
+      normalizedFilePath
+    );
 
-		// if (!pdf_summary_added) {
-		// 	return res.status(401).json({
-		// 		message: "Hubo un error al procesar el PDF firmado"
-		// 	})
-		// }
+    if (result === undefined) {
+      res.status(500).json({
+        error: 'Ocurrió un error al guardar el archivo en S3',
+        message:
+          'La función devolvió undefined, probablemente hubo un problema al guardar el archivo',
+      });
+    } else {
+      const { fileKey, new_filename, file_path } = result;
 
-		// const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
-		const result = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
+      res.json({
+        completePath: fileKey,
+        new_filename,
+        file_path,
+      });
+    }
 
-		if (result === undefined) {
-			res.status(500).json({
-				error: "Ocurrió un error al guardar el archivo en S3",
-				message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
-			})
-		} else {
-			const { fileKey, new_filename, file_path } = result
+    filerepository.deleteFile(path_file);
+    filerepository.deleteFile(signature_params.path_signature);
+    filerepository.deleteFile(signature_params.qr_filename);
+    filerepository.deleteFile(pdf_signed);
+    // filerepository.deleteFile(pdf_summary_added)
 
-			res.json({
-				completePath: fileKey,
-				new_filename,
-				file_path
-			})
-		}
+    if (signature_params.biometrico) {
+      filerepository.deleteFile(signature_params.path_dni_anverso);
+      filerepository.deleteFile(signature_params.path_dni_reverso);
+      filerepository.deleteFile(signature_params.path_imagen_firmante);
+    }
+  } catch (error) {
+    loggerRepository.error(error);
+    console.error('Error:', error);
+    return res.status(500).json({
+      message: 'Error al procesar el PDF',
+      error: error,
+    });
+  }
+});
 
-		filerepository.deleteFile(path_file)
-		filerepository.deleteFile(signature_params.path_signature)
-		filerepository.deleteFile(signature_params.qr_filename)
-		filerepository.deleteFile(pdf_signed)
-		// filerepository.deleteFile(pdf_summary_added)
+apiRouter.post('/eSignature2', async (req: Request, res: Response) => {
+  const { origin_filename, file_path, signature_params } = req.body;
 
-		if (signature_params.biometrico) {
-			filerepository.deleteFile(signature_params.path_dni_anverso)
-			filerepository.deleteFile(signature_params.path_dni_reverso)
-			filerepository.deleteFile(signature_params.path_imagen_firmante)
-		}
+  try {
+    if (signature_params.biometrico) {
+      const normalized_dni_anverso =
+        signature_params.imagen_dni_anverso.startsWith('/')
+          ? signature_params.imagen_dni_anverso.slice(1)
+          : signature_params.imagen_dni_anverso;
+      const normalized_dni_reverso =
+        signature_params.imagen_dni_reverso.startsWith('/')
+          ? signature_params.imagen_dni_reverso.slice(1)
+          : signature_params.imagen_dni_reverso;
+      const normalized_imagen_firmante =
+        signature_params.imagen_firmante.startsWith('/')
+          ? signature_params.imagen_firmante.slice(1)
+          : signature_params.imagen_firmante;
 
-	} catch (error) {
-		loggerRepository.error(error)
-		console.error("Error:", error)
-		return res.status(500).json({
-			message: "Error al procesar el PDF",
-			error: error
-		})
-	}
-})
+      signature_params.path_dni_anverso =
+        await s3Repository.getTempPathFromURI_JPG(
+          `public/${normalized_dni_anverso}`
+        );
+      signature_params.path_dni_reverso =
+        await s3Repository.getTempPathFromURI_JPG(
+          `public/${normalized_dni_reverso}`
+        );
+      signature_params.path_imagen_firmante =
+        await s3Repository.getTempPathFromURI_JPG(
+          `public/${normalized_imagen_firmante}`
+        );
+    }
 
-apiRouter.post("/eSignature2", async (req: Request, res: Response) => {
+    const normalizedFilePath = file_path.startsWith('/')
+      ? file_path.slice(1)
+      : file_path;
 
-	const {
-		origin_filename,
-		file_path,
-		signature_params
-	} = req.body
+    const normalizedFilename = origin_filename.startsWith('/')
+      ? origin_filename.slice(1)
+      : origin_filename;
 
-	try {
+    const normalizesQRFilename = signature_params.qr_filename.startsWith('/')
+      ? signature_params.qr_filename.slice(1)
+      : signature_params.qr_filename;
 
-		if (signature_params.biometrico) {
-			const normalized_dni_anverso = signature_params.imagen_dni_anverso.startsWith("/") ? signature_params.imagen_dni_anverso.slice(1) : signature_params.imagen_dni_anverso
-			const normalized_dni_reverso = signature_params.imagen_dni_reverso.startsWith("/") ? signature_params.imagen_dni_reverso.slice(1) : signature_params.imagen_dni_reverso
-			const normalized_imagen_firmante = signature_params.imagen_firmante.startsWith("/") ? signature_params.imagen_firmante.slice(1) : signature_params.imagen_firmante
+    const path_file = await s3Repository.getTempPathFromURI_PDF(
+      `public/${normalizedFilename}`
+    );
 
-			signature_params.path_dni_anverso = await s3Repository.getTempPathFromURI_JPG(`public/${normalized_dni_anverso}`)
-			signature_params.path_dni_reverso = await s3Repository.getTempPathFromURI_JPG(`public/${normalized_dni_reverso}`)
-			signature_params.path_imagen_firmante = await s3Repository.getTempPathFromURI_JPG(`public/${normalized_imagen_firmante}`)
-		}
+    if (!path_file) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener el PDF',
+      });
+    }
 
-		const normalizedFilePath = file_path.startsWith("/") ? file_path.slice(1) : file_path
+    signature_params.path_signature = await s3Repository.getTempPathFromURI_PNG(
+      `public/${signature_params.signature_filename}`
+    );
 
-		const normalizedFilename = origin_filename.startsWith("/") ? origin_filename.slice(1) : origin_filename
+    if (!signature_params.path_signature) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener la firma',
+      });
+    }
 
-		const normalizesQRFilename = signature_params.qr_filename.startsWith("/") ? signature_params.qr_filename.slice(1) : signature_params.qr_filename
+    signature_params.qr_filename = await s3Repository.getTempPathFromURI_PNG(
+      `public/${normalizesQRFilename}`
+    );
 
-		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${normalizedFilename}`)
+    if (!signature_params.qr_filename) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener el QR',
+      });
+    }
 
-		if (!path_file) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener el PDF"
-			})
-		}
+    const pdf_signed = await pdfEditor.addInitialSignature2(
+      path_file,
+      signature_params
+    );
 
-		signature_params.path_signature = await s3Repository.getTempPathFromURI_PNG(`public/${signature_params.signature_filename}`)
+    if (!pdf_signed) {
+      return res.status(401).json({
+        message: 'Hubo un error al procesar el PDF no firmado',
+      });
+    }
 
-		if (!signature_params.path_signature) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener la firma"
-			})
-		}
+    const pdf_summary_added = await pdfEditor.addSummarySignature(
+      pdf_signed,
+      signature_params
+    );
 
-		signature_params.qr_filename = await s3Repository.getTempPathFromURI_PNG(`public/${normalizesQRFilename}`)
+    if (!pdf_summary_added) {
+      return res.status(401).json({
+        message: 'Hubo un error al procesar el PDF firmado',
+      });
+    }
 
-		if (!signature_params.qr_filename) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener el QR"
-			})
-		}
+    const result = await s3Repository.addFileToS3(
+      pdf_summary_added,
+      normalizedFilePath
+    );
 
-		const pdf_signed = await pdfEditor.addInitialSignature2(path_file, signature_params)
+    if (result === undefined) {
+      res.status(500).json({
+        error: 'Ocurrió un error al guardar el archivo en S3',
+        message:
+          'La función devolvió undefined, probablemente hubo un problema al guardar el archivo',
+      });
+    } else {
+      const { fileKey, new_filename, file_path } = result;
 
-		if (!pdf_signed) {
-			return res.status(401).json({
-				message: "Hubo un error al procesar el PDF no firmado"
-			})
-		}
+      res.json({
+        completePath: fileKey,
+        new_filename,
+        file_path,
+      });
+    }
 
-		const pdf_summary_added = await pdfEditor.addSummarySignature(pdf_signed, signature_params)
+    filerepository.deleteFile(path_file);
+    filerepository.deleteFile(signature_params.path_signature);
+    filerepository.deleteFile(signature_params.qr_filename);
+    filerepository.deleteFile(pdf_signed);
+    filerepository.deleteFile(pdf_summary_added);
 
-		if (!pdf_summary_added) {
-			return res.status(401).json({
-				message: "Hubo un error al procesar el PDF firmado"
-			})
-		}
+    if (signature_params.biometrico) {
+      filerepository.deleteFile(signature_params.path_dni_anverso);
+      filerepository.deleteFile(signature_params.path_dni_reverso);
+      filerepository.deleteFile(signature_params.path_imagen_firmante);
+    }
 
-		const result = await s3Repository.addFileToS3(pdf_summary_added, normalizedFilePath)
+    // res.json({
+    // 	message: "PDF firmado correctamente",
+    // })
+  } catch (error) {
+    loggerRepository.error(error);
+    console.error('Error:', error);
+    return res.status(500).json({
+      message: 'Error al procesar el PDF',
+      error: error,
+    });
+  }
+});
 
-		if (result === undefined) {
-			res.status(500).json({
-				error: "Ocurrió un error al guardar el archivo en S3",
-				message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
-			})
-		} else {
-			const { fileKey, new_filename, file_path } = result
+apiRouter.post('/addDigitalQR', async (req: Request, res: Response) => {
+  const { origin_filename, qr_filename, qr_code, file_path } = req.body;
 
-			res.json({
-				completePath: fileKey,
-				new_filename,
-				file_path
-			})
-		}
+  try {
+    const normalizedFilename = origin_filename.startsWith('/')
+      ? origin_filename.slice(1)
+      : origin_filename;
 
-		filerepository.deleteFile(path_file)
-		filerepository.deleteFile(signature_params.path_signature)
-		filerepository.deleteFile(signature_params.qr_filename)
-		filerepository.deleteFile(pdf_signed)
-		filerepository.deleteFile(pdf_summary_added)
+    const normalizedQRFilename = qr_filename.startsWith('/')
+      ? qr_filename.slice(1)
+      : qr_filename;
 
-		if (signature_params.biometrico) {
-			filerepository.deleteFile(signature_params.path_dni_anverso)
-			filerepository.deleteFile(signature_params.path_dni_reverso)
-			filerepository.deleteFile(signature_params.path_imagen_firmante)
-		}
+    const normalizedFilePath = file_path.startsWith('/')
+      ? file_path.slice(1)
+      : file_path;
 
-		// res.json({
-		// 	message: "PDF firmado correctamente",
-		// })
+    const path_file = await s3Repository.getTempPathFromURI_PDF(
+      `public/${normalizedFilename}`
+    );
 
-	} catch (error) {
-		loggerRepository.error(error)
-		console.error("Error:", error)
-		return res.status(500).json({
-			message: "Error al procesar el PDF",
-			error: error
-		})
-	}
-})
+    if (!path_file) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener el PDF',
+      });
+    }
 
-apiRouter.post("/addDigitalQR", async (req: Request, res: Response) => {
-	
-	const {
-		origin_filename,
-		qr_filename,
-		qr_code,
-		file_path,
-	} = req.body
+    const qr_path = await s3Repository.getTempPathFromURI_PNG(
+      `public/${normalizedQRFilename}`
+    );
 
-	try {
-		
-		const normalizedFilename = origin_filename.startsWith("/") ? origin_filename.slice(1) : origin_filename
-		
-		const normalizedQRFilename = qr_filename.startsWith("/") ? qr_filename.slice(1) : qr_filename
-		
-		const normalizedFilePath = file_path.startsWith("/") ? file_path.slice(1) : file_path
-		
-		const path_file = await s3Repository.getTempPathFromURI_PDF(`public/${normalizedFilename}`)
+    if (!qr_path) {
+      return res.status(401).json({
+        message: 'Hubo un error al obtener el QR',
+      });
+    }
 
-		if (!path_file) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener el PDF"
-			})
-		}
+    const pdf_signed = await pdfEditor.addDigitalQRCode(
+      path_file,
+      qr_path,
+      qr_code
+    );
 
-		const qr_path = await s3Repository.getTempPathFromURI_PNG(`public/${normalizedQRFilename}`)
+    if (!pdf_signed) {
+      return res.status(401).json({
+        message: 'Hubo un error al procesar el PDF no firmado',
+      });
+    }
 
-		if (!qr_path) {
-			return res.status(401).json({
-				message: "Hubo un error al obtener el QR"
-			})
-		}
+    const result = await s3Repository.addFileToS3(
+      pdf_signed,
+      normalizedFilePath
+    );
 
-		const pdf_signed = await pdfEditor.addDigitalQRCode(path_file, qr_path, qr_code)
-		
-		if (!pdf_signed) {
-			return res.status(401).json({
-				message: "Hubo un error al procesar el PDF no firmado"
-			})
-		}
+    if (result === undefined) {
+      res.status(500).json({
+        error: 'Ocurrió un error al guardar el archivo en S3',
+        message:
+          'La función devolvió undefined, probablemente hubo un problema al guardar el archivo',
+      });
+    } else {
+      const { fileKey, new_filename, file_path } = result;
 
-		const result = await s3Repository.addFileToS3(pdf_signed, normalizedFilePath)
+      res.json({
+        completePath: fileKey,
+        new_filename,
+        file_path,
+      });
+    }
 
-		if (result === undefined) {
-			res.status(500).json({
-				error: "Ocurrió un error al guardar el archivo en S3",
-				message: "La función devolvió undefined, probablemente hubo un problema al guardar el archivo"
-			})
-		} else {
-			const { fileKey, new_filename, file_path } = result
+    filerepository.deleteFile(path_file);
+    filerepository.deleteFile(qr_path);
+    filerepository.deleteFile(pdf_signed);
+  } catch (error) {
+    loggerRepository.error(error);
+    console.error('Error:', error);
+    return res.status(500).json({
+      message: 'Error al procesar el PDF',
+      error: error,
+    });
+  }
+});
 
-			res.json({
-				completePath: fileKey,
-				new_filename,
-				file_path
-			})
-		}
+apiRouter.post('/addExternalQR', async (req: Request, res: Response) => {
+  const {
+    document_base64, // El PDF en formato base64
+    qr_image_base64, // La imagen QR en formato base64
+    qr_code, // Código a insertar en el PDF
+  } = req.body;
 
-		filerepository.deleteFile(path_file)
-		filerepository.deleteFile(qr_path)
-		filerepository.deleteFile(pdf_signed)
-		
-	} catch (error) {
-		loggerRepository.error(error)
-		console.error("Error:", error)
-		return res.status(500).json({
-			message: "Error al procesar el PDF",
-			error: error
-		})
-	}
-})
+  try {
+    // Decodificar el PDF y la imagen QR de base64 a buffer
+    const pdfBuffer = Buffer.from(document_base64, 'base64');
+    const qrBuffer = Buffer.from(qr_image_base64, 'base64');
 
-export { apiRouter }
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // Cargar la imagen QR en pdf-lib
+    const qrImage = await pdfDoc.embedPng(qrBuffer);
+
+    // Obtener la primera página del PDF
+    const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
+
+    // Tamaño de la página para colocar el código y el QR en la parte superior
+    const { height } = firstPage.getSize();
+
+    // Dibujar el código QR y el texto en la primera página
+    firstPage.drawText('Code: ' + qr_code, {
+      x: 1,
+      y: height - 6,
+      size: 6,
+      font: helveticaFont,
+      color: rgb(0, 0, 0),
+    });
+
+    firstPage.drawImage(qrImage, {
+      x: 1,
+			y: height - 5 - 48,
+			width: 45,
+			height: 45,
+    });
+
+    // Guardar el PDF modificado en un buffer
+    const modifiedPdfBytes = await pdfDoc.save();
+
+    // Convertir el PDF modificado a base64
+    const modifiedPdfBase64 = Buffer.from(modifiedPdfBytes).toString("base64");
+
+    // Enviar el PDF modificado en base64 en la respuesta
+    res.json({
+      message: 'PDF procesado exitosamente',
+      document_base64: modifiedPdfBase64,
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: 'Error al procesar el PDF',
+      error: (error as Error).message,
+    });
+  }
+});
+
+export { apiRouter };
