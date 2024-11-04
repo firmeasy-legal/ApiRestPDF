@@ -34,6 +34,8 @@ export class S3Repository {
 			Key: uri,
 		})
 
+		console.log('Bucket:', process.env.AWS_BUCKET)
+
 		try {
 			const response = await this.s3Client.send(command)
 
