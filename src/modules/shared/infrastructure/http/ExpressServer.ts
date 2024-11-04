@@ -4,7 +4,8 @@ import { LoggerRepository } from "@/shared/domain/logs/LoggerRepository"
 import { morganLoggerMiddleware } from "./httpLoggerFunction"
 
 // import cors from "cors"
-
+import dotenv from 'dotenv';
+dotenv.config();
 
 type Params = {
 	apiRouter: Router
